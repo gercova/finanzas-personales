@@ -1,0 +1,43 @@
+# Environment files (CRITICAL: Never commit credentials)
+.env
+.env.local
+.env.*.local
+.env.backup
+!.env.example
+
+# Log files and error logs
+*.log
+error_log
+php_action/error_log
+logs/
+
+# Database dumps and SQL backups
+*.sql
+*.sql.gz
+*.sqlite
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and Editor configuration
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary, cache, and swap files
+*.bak
+*.swp
+*~
+*.tmp
+*.cache
+
+# Composer and Node dependencies (if added in the future)
+/vendor/
+/node_modules/

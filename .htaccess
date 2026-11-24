@@ -1,0 +1,22 @@
+# Protect sensitive environment and system files from direct web browser access
+<FilesMatch "^\.(env|git|gitignore|htaccess|htpasswd)|(\.(sql|log|md|sh|bak|dist))$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "^\.(env|git|gitignore|htaccess|htpasswd)|(\.(sql|log|md|sh|bak|dist))$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Prevent directory browsing
+Options -Indexes
+
+# Security Headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

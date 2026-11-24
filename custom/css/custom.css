@@ -1,0 +1,304 @@
+/* ==========================================================================
+   Personal Finance & Inventory Management System - Custom & Responsive CSS
+   ========================================================================== */
+
+/* Navbar transitions & shadows */
+nav.navbar {
+  transition: box-shadow 0.3s ease;
+  margin-bottom: 20px;
+}
+nav.navbar:hover {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.15);
+}
+.navbar-brand {
+  font-weight: 600;
+  display: inline-block;
+}
+
+/* Button hover effects */
+button.button1,
+.btn {
+  transition: all 0.2s ease-in-out;
+}
+button.button1:hover {
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
+}
+
+/* Card widgets */
+div.card {
+  width: 100%;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.1);
+  text-align: center;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  background-color: #fff;
+}
+div.cardHeader {
+  background-color: #4CAF50;
+  color: white;
+  padding: 12px 10px;
+  font-size: 36px;
+}
+div.cardHeader h1 {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 700;
+  word-break: break-word;
+}
+div.cardContainer {
+  padding: 12px 10px;
+  font-size: 15px;
+  font-weight: 500;
+}
+div.cardContainer p {
+  margin: 0;
+}
+
+/* Utility classes */
+.div-hide {
+  display: none !important;
+}
+.kv-file-zoom {
+  display: none;
+}
+div.kv-avatar div.file-input div.file-preview {
+  width: 200px;
+  max-width: 100%;
+}
+.dashboard-widget {
+  margin-bottom: 15px;
+  border-radius: 4px;
+}
+
+/* Login Form vertical centering */
+.vertical {
+  padding-top: 100px;
+  padding-bottom: 80px;
+  min-height: calc(100vh - 60px);
+}
+
+/* Responsive Table Wrapper */
+.table-responsive {
+  width: 100%;
+  margin-bottom: 15px;
+  overflow-y: hidden;
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+  border: 0;
+  -webkit-overflow-scrolling: touch;
+}
+.table-responsive > .table {
+  margin-bottom: 0;
+}
+
+/* Image scaling inside modals and tables */
+img.thumbnail,
+.modal-body img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==========================================================================
+   Responsive Breakpoints
+   ========================================================================== */
+
+/* Mobile Devices (Max Width: 767px) */
+@media (max-width: 767px) {
+  /* Body and main container */
+  body {
+    font-size: 13px;
+  }
+  .container.main-content-container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  /* Navbar on Mobile */
+  .navbar-brand {
+    font-size: 14px;
+    max-width: 75%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 15px 10px;
+  }
+  .navbar-nav {
+    margin: 7.5px -15px;
+  }
+  .navbar-nav > li > a {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e7e7e7;
+  }
+
+  /* Login screen on mobile */
+  .vertical {
+    padding-top: 25px;
+    padding-bottom: 25px;
+    min-height: auto;
+  }
+
+  /* Action buttons */
+  .div-action.pull.pull-right {
+    float: none !important;
+    text-align: center;
+    margin-bottom: 15px;
+  }
+  .div-action.pull.pull-right .btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  /* DataTables layout on mobile */
+  .dataTables_wrapper .dataTables_length,
+  .dataTables_wrapper .dataTables_filter {
+    float: none !important;
+    text-align: left !important;
+    margin-bottom: 10px;
+  }
+  .dataTables_wrapper .dataTables_filter label {
+    width: 100%;
+  }
+  .dataTables_wrapper .dataTables_filter input {
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-top: 5px;
+    display: block;
+  }
+  .dataTables_wrapper .dataTables_info,
+  .dataTables_wrapper .dataTables_paginate {
+    float: none !important;
+    text-align: center !important;
+    margin-top: 10px;
+  }
+  .dataTables_wrapper .dataTables_paginate .paginate_button {
+    padding: 4px 8px !important;
+    font-size: 12px;
+  }
+
+  /* Hide colon separator labels on mobile forms */
+  .form-horizontal label.col-sm-1 {
+    display: none !important;
+  }
+  .form-horizontal .control-label {
+    text-align: left !important;
+    margin-bottom: 5px;
+    padding-top: 0;
+  }
+  .form-horizontal .form-group {
+    margin-left: 0;
+    margin-right: 0;
+    margin-bottom: 14px;
+  }
+  .form-horizontal .col-sm-7,
+  .form-horizontal .col-sm-8,
+  .form-horizontal .col-sm-9,
+  .form-horizontal .col-sm-10 {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Order action buttons */
+  .submitButtonFooter .btn,
+  .editButtonFooter .btn {
+    width: 100%;
+    margin-bottom: 10px;
+    display: block;
+  }
+  .submitButtonFooter .col-sm-offset-2,
+  .editButtonFooter .col-sm-offset-2 {
+    margin-left: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  /* Calendar on mobile */
+  .fc-toolbar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .fc-toolbar .fc-left,
+  .fc-toolbar .fc-center,
+  .fc-toolbar .fc-right {
+    float: none !important;
+    display: block;
+    text-align: center;
+    margin: 0;
+  }
+  .fc-toolbar h2 {
+    font-size: 16px;
+    margin: 4px 0;
+  }
+  .fc-button {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    height: auto !important;
+  }
+  .fc-view-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Card headers font size */
+  div.cardHeader h1 {
+    font-size: 26px;
+  }
+
+  /* Modals on mobile */
+  .modal-dialog {
+    margin: 10px;
+    width: auto;
+  }
+  .modal-body {
+    max-height: calc(100vh - 180px) !important;
+    overflow-y: auto !important;
+    padding: 15px;
+  }
+  .modal-footer {
+    text-align: center;
+  }
+  .modal-footer .btn {
+    margin-bottom: 5px;
+    min-width: 110px;
+  }
+}
+
+/* Tablet Devices (768px - 991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .vertical {
+    padding-top: 50px;
+    padding-bottom: 50px;
+  }
+  div.cardHeader h1 {
+    font-size: 30px;
+  }
+  .modal-dialog {
+    width: 90%;
+    max-width: 700px;
+  }
+}
+
+/* Print Optimization */
+@media print {
+  nav.navbar,
+  .breadcrumb,
+  .div-action,
+  .btn,
+  .dataTables_length,
+  .dataTables_filter,
+  .dataTables_info,
+  .dataTables_paginate {
+    display: none !important;
+  }
+  .panel {
+    border: none;
+    box-shadow: none;
+  }
+  .table {
+    width: 100% !important;
+  }
+}
