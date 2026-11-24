@@ -37,70 +37,143 @@
 		});
 	</script>
 	<style type="text/css">
-		/* Finance navbar enhancements */
-		.navbar-quota-bar {
-			padding: 6px 15px;
-			min-width: 180px;
-			display: inline-block;
+		/* ==============================================================
+		   MODERN EXECUTIVE FINTECH NAVBAR (High-contrast Dark Theme)
+		   Overrides bootstrap-theme gradient cleanly with !important
+		   ============================================================== */
+		.navbar-default {
+			background-color: #1e293b !important;
+			background-image: none !important;
+			border-color: #0f172a !important;
+			border-radius: 0 !important;
+			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+			margin-bottom: 22px;
+		}
+		.navbar-default .navbar-brand {
+			color: #ffffff !important;
+			font-size: 17px;
+			font-weight: 700;
+			letter-spacing: 0.4px;
+			padding: 15px 16px;
+			transition: color 0.2s ease;
+		}
+		.navbar-default .navbar-brand i {
+			color: #10b981;
+			font-size: 19px;
+			margin-right: 6px;
 			vertical-align: middle;
 		}
-		.navbar-quota-bar .quota-label {
-			font-size: 10px;
-			color: #aaa;
-			margin-bottom: 2px;
+		.navbar-default .navbar-brand:hover {
+			color: #38bdf8 !important;
 		}
-		.navbar-quota-bar .progress {
-			margin-bottom: 0;
-			height: 8px;
-			border-radius: 4px;
-			background-color: #2a2a2a;
-		}
-		.navbar-quota-bar .quota-text {
-			font-size: 10px;
-			color: #bbb;
-			margin-top: 2px;
-		}
-		.navbar-default {
-			background-color: #1a1a2e;
-			border-color: #16213e;
-		}
-		.navbar-default .navbar-brand,
 		.navbar-default .navbar-nav > li > a {
-			color: #e0e0e0;
+			color: #cbd5e1 !important;
+			font-weight: 500;
+			font-size: 13.5px;
+			padding: 15px 12px;
+			transition: all 0.2s ease;
 		}
-		.navbar-default .navbar-brand:hover,
 		.navbar-default .navbar-nav > li > a:hover {
-			color: #ffffff;
-			background-color: #16213e;
+			color: #ffffff !important;
+			background-color: rgba(255, 255, 255, 0.08) !important;
+			background-image: none !important;
 		}
 		.navbar-default .navbar-nav > .active > a,
 		.navbar-default .navbar-nav > .active > a:hover,
 		.navbar-default .navbar-nav > .active > a:focus {
-			background-color: #0f3460;
-			color: #ffffff;
-		}
-		.navbar-default .navbar-toggle {
-			border-color: #444;
-		}
-		.navbar-default .navbar-toggle .icon-bar {
-			background-color: #e0e0e0;
+			color: #ffffff !important;
+			background-color: #2563eb !important;
+			background-image: none !important;
+			box-shadow: inset 0 -3px 0 #60a5fa, 0 2px 4px rgba(0,0,0,0.2) !important;
+			font-weight: 600;
 		}
 		.navbar-default .navbar-nav > .open > a,
 		.navbar-default .navbar-nav > .open > a:hover,
 		.navbar-default .navbar-nav > .open > a:focus {
-			background-color: #0f3460;
-			color: #fff;
+			color: #ffffff !important;
+			background-color: #0f172a !important;
+			background-image: none !important;
 		}
-		.navbar-default .navbar-nav > .open .dropdown-menu {
-			background-color: #1a1a2e;
-			border-color: #0f3460;
+		/* Dropdown Menu */
+		.navbar-default .navbar-nav .dropdown-menu {
+			background-color: #1e293b !important;
+			border: 1px solid #334155 !important;
+			border-radius: 6px !important;
+			box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45) !important;
+			padding: 6px 0;
+			margin-top: 4px;
 		}
-		.navbar-default .navbar-nav > .open .dropdown-menu > li > a {
-			color: #e0e0e0;
+		.navbar-default .navbar-nav .dropdown-menu > li > a {
+			color: #e2e8f0 !important;
+			padding: 9px 18px;
+			font-size: 13px;
+			transition: background 0.15s ease;
 		}
-		.navbar-default .navbar-nav > .open .dropdown-menu > li > a:hover {
-			background-color: #0f3460;
-			color: #fff;
+		.navbar-default .navbar-nav .dropdown-menu > li > a:hover {
+			background-color: #2563eb !important;
+			background-image: none !important;
+			color: #ffffff !important;
+		}
+		.navbar-default .navbar-nav .dropdown-menu .divider {
+			background-color: #334155 !important;
+			margin: 5px 0;
+		}
+		/* Mobile Navbar Toggle Button */
+		.navbar-default .navbar-toggle {
+			border-color: #475569 !important;
+			background-color: rgba(255,255,255,0.06) !important;
+			margin-top: 10px;
+			margin-bottom: 10px;
+		}
+		.navbar-default .navbar-toggle:hover,
+		.navbar-default .navbar-toggle:focus {
+			background-color: rgba(255,255,255,0.12) !important;
+		}
+		.navbar-default .navbar-toggle .icon-bar {
+			background-color: #f8fafc !important;
+		}
+		/* Azure Quota Container */
+		.navbar-quota-bar {
+			padding: 6px 14px;
+			min-width: 195px;
+			display: inline-block;
+			vertical-align: middle;
+			background: rgba(15, 23, 42, 0.7);
+			border: 1px solid rgba(255, 255, 255, 0.14);
+			border-radius: 6px;
+			margin-top: 8px;
+			margin-bottom: 8px;
+			margin-left: 12px;
+		}
+		.navbar-quota-bar .quota-label {
+			font-size: 10px;
+			font-weight: 700;
+			color: #94a3b8;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 2px;
+		}
+		.navbar-quota-bar .progress {
+			margin-bottom: 0;
+			height: 7px;
+			border-radius: 4px;
+			background-color: #334155;
+			overflow: hidden;
+		}
+		.navbar-quota-bar .quota-text {
+			font-size: 10.5px;
+			color: #e2e8f0;
+			margin-top: 2px;
+			font-weight: 500;
+		}
+		/* Mobile responsive adjustments */
+		@media (max-width: 767px) {
+			.navbar-default .navbar-nav > li > a {
+				border-bottom: 1px solid #334155;
+			}
+			.navbar-default .navbar-collapse {
+				border-color: #334155;
+			}
 		}
 	</style>
 </head>
@@ -162,7 +235,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 					<span class="icon-bar"></span>
 				</button>
 				<a class="navbar-brand" href="dashboard.php">
-					<i class="glyphicon glyphicon-piggy-bank"></i> <?php echo htmlspecialchars(env('APP_NAME', 'Finanzas'), ENT_QUOTES, 'UTF-8'); ?>
+					<i class="glyphicon glyphicon-piggy-bank"></i> <?php echo htmlspecialchars(env('APP_NAME', 'Finanzas Personales'), ENT_QUOTES, 'UTF-8'); ?>
 				</a>
 			</div>
 
@@ -179,7 +252,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 					</div>
 				</div>
 				<div class="quota-text">
-					$<?php echo number_format($monthlySpent, 2); ?> / $<?php echo number_format((float)$spendLimit['monthly_limit'], 2); ?>
+					S/ <?php echo number_format($monthlySpent, 2); ?> / S/ <?php echo number_format((float)$spendLimit['monthly_limit'], 2); ?>
 					&nbsp;(<?php echo $quotaPct; ?>%)
 				</div>
 			</div>
@@ -195,32 +268,32 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 					</li>
 					<li id="navIncome" <?php if($currentPage==='income.php') echo 'class="active"'; ?>>
 						<a href="income.php">
-							<i class="glyphicon glyphicon-arrow-up text-success"></i> Ingresos
+							<i class="glyphicon glyphicon-arrow-up" style="color:#4ade80;"></i> Ingresos
 						</a>
 					</li>
 					<li id="navExpense" <?php if($currentPage==='expense.php') echo 'class="active"'; ?>>
 						<a href="expense.php">
-							<i class="glyphicon glyphicon-arrow-down text-danger"></i> Gastos
+							<i class="glyphicon glyphicon-arrow-down" style="color:#f87171;"></i> Gastos
 						</a>
 					</li>
 					<li id="navLoans" <?php if($currentPage==='loans.php') echo 'class="active"'; ?>>
 						<a href="loans.php">
-							<i class="glyphicon glyphicon-retweet text-warning"></i> Préstamos
+							<i class="glyphicon glyphicon-retweet" style="color:#fbbf24;"></i> Préstamos
 						</a>
 					</li>
 					<li id="navProjects" <?php if($currentPage==='projects.php') echo 'class="active"'; ?>>
 						<a href="projects.php">
-							<i class="glyphicon glyphicon-briefcase"></i> Proyectos
+							<i class="glyphicon glyphicon-briefcase" style="color:#38bdf8;"></i> Proyectos
 						</a>
 					</li>
 					<li id="navAssets" <?php if($currentPage==='assets.php') echo 'class="active"'; ?>>
 						<a href="assets.php">
-							<i class="glyphicon glyphicon-certificate"></i> Activos
+							<i class="glyphicon glyphicon-certificate" style="color:#c084fc;"></i> Activos
 						</a>
 					</li>
 					<li id="navReport" <?php if($currentPage==='finance_report.php') echo 'class="active"'; ?>>
 						<a href="finance_report.php">
-							<i class="glyphicon glyphicon-stats"></i> Reportes
+							<i class="glyphicon glyphicon-stats" style="color:#22d3ee;"></i> Reportes
 						</a>
 					</li>
 				</ul>
@@ -228,7 +301,7 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 				<ul class="nav navbar-nav navbar-right">
 					<li class="dropdown" id="navSetting">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-							<i class="glyphicon glyphicon-user"></i>
+							<i class="glyphicon glyphicon-user" style="color:#38bdf8;"></i>
 							<?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?>
 							<span class="caret"></span>
 						</a>

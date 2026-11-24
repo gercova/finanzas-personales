@@ -6,10 +6,8 @@
 $currentMonth = date('Y-m');
 $currentYear  = date('Y');
 
-$stmtMes = $connect->prepare(
-    "SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE DATE_FORMAT(income_date,'%Y-%m')=? AND created_by=?"
-);
-$totalMes = 0;
+$stmtMes      = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE DATE_FORMAT(income_date,'%Y-%m')=? AND created_by=?" );
+$totalMes     = 0;
 if ($stmtMes) {
     $stmtMes->bind_param("si", $currentMonth, $_SESSION['userId']);
     $stmtMes->execute();
@@ -17,9 +15,7 @@ if ($stmtMes) {
     $stmtMes->close();
 }
 
-$stmtYear = $connect->prepare(
-    "SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=?"
-);
+$stmtYear = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=?");
 $totalYear = 0;
 if ($stmtYear) {
     $stmtYear->bind_param("ii", $currentYear, $_SESSION['userId']);
@@ -28,45 +24,43 @@ if ($stmtYear) {
     $stmtYear->close();
 }
 
-$stmtRec = $connect->prepare(
-    "SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=?"
-);
+$stmtRec = $connect->prepare("SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=?");
 $totalRecurring = 0;
 if ($stmtRec) {
-    $stmtRec->bind_param("i", $_SESSION['userId']);
-    $stmtRec->execute();
-    $totalRecurring = (int)$stmtRec->get_result()->fetch_assoc()['cnt'];
-    $stmtRec->close();
+  $stmtRec->bind_param("i", $_SESSION['userId']);
+  $stmtRec->execute();
+  $totalRecurring = (int)$stmtRec->get_result()->fetch_assoc()['cnt'];
+  $stmtRec->close();
 }
 
 // Accounts for select
 $stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
 $accounts = [];
 if ($stmtAcc) {
-    $stmtAcc->execute();
-    $resAcc = $stmtAcc->get_result();
-    while ($row = $resAcc->fetch_assoc()) $accounts[] = $row;
-    $stmtAcc->close();
+  $stmtAcc->execute();
+  $resAcc = $stmtAcc->get_result();
+  while ($row = $resAcc->fetch_assoc()) $accounts[] = $row;
+  $stmtAcc->close();
 }
 
 // Financial categories
 $stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'INCOME' AND status=1 ORDER BY category_name");
 $finCategories = [];
 if ($stmtCat) {
-    $stmtCat->execute();
-    $resCat = $stmtCat->get_result();
-    while ($row = $resCat->fetch_assoc()) $finCategories[] = $row;
-    $stmtCat->close();
+  $stmtCat->execute();
+  $resCat = $stmtCat->get_result();
+  while ($row = $resCat->fetch_assoc()) $finCategories[] = $row;
+  $stmtCat->close();
 }
 
 // Projects
 $stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' ORDER BY project_name");
 $projects = [];
 if ($stmtProj) {
-    $stmtProj->execute();
-    $resProj = $stmtProj->get_result();
-    while ($row = $resProj->fetch_assoc()) $projects[] = $row;
-    $stmtProj->close();
+  $stmtProj->execute();
+  $resProj = $stmtProj->get_result();
+  while ($row = $resProj->fetch_assoc()) $projects[] = $row;
+  $stmtProj->close();
 }
 ?>
 
@@ -112,15 +106,16 @@ if ($stmtProj) {
       <div class="panel-heading">
         <div class="page-heading">
           <i class="glyphicon glyphicon-arrow-up text-success"></i> Gestión de Ingresos
+          <div class="div-action pull pull-right">
+            <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal">
+              <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
+            </button>
+          </div>
         </div>
       </div>
       <div class="panel-body">
         <div class="remove-messages"></div>
-        <div class="div-action pull pull-right" style="padding-bottom:20px;">
-          <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal">
-            <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
-          </button>
-        </div>
+        
         <div class="table-responsive">
           <table class="table table-hover" id="manageIncomeTable" style="width:100%;">
             <thead>
