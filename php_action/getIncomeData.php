@@ -8,8 +8,8 @@ $userId = (int)$_SESSION['userId'];
 if ($id <= 0) { echo json_encode(['success'=>false,'messages'=>'ID inválido.']); exit; }
 
 $stmt = $connect->prepare(
-    "SELECT id, concept, account_id, category_id, project_id, income_date, amount, is_recurring, status, notes
-     FROM incomes WHERE id=? AND created_by=?"
+    "SELECT income_id AS id, concept, account_id, category_id, project_id, income_date, amount, is_recurring, status, notes
+     FROM incomes WHERE income_id=? AND created_by=?"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmt->bind_param("ii", $id, $userId);

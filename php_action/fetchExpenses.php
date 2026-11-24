@@ -5,12 +5,12 @@ header('Content-Type: application/json');
 $userId = (int)$_SESSION['userId'];
 
 $stmt = $connect->prepare("
-    SELECT e.id, e.concept, a.account_name, fc.category_name,
+    SELECT e.expense_id AS id, e.concept, a.account_name, fc.category_name,
            e.expense_date, e.amount, e.receipt_image, e.status, e.notes,
            e.account_id, e.category_id, e.project_id
     FROM expenses e
-    LEFT JOIN accounts a ON e.account_id = a.id
-    LEFT JOIN financial_categories fc ON e.category_id = fc.id
+    LEFT JOIN accounts a ON e.account_id = a.account_id
+    LEFT JOIN financial_categories fc ON e.category_id = fc.category_id
     WHERE e.created_by = ?
     ORDER BY e.expense_date DESC
 ");
@@ -28,7 +28,7 @@ while ($row = $result->fetch_assoc()) {
 
     $imgHtml = '-';
     if (!empty($row['receipt_image'])) {
-        $imgUrl = htmlspecialchars('../' . $row['receipt_image']);
+        $imgUrl = htmlspecialchars($row['receipt_image']);
         $imgHtml = '<a href="' . $imgUrl . '" target="_blank"><img src="' . $imgUrl . '" style="height:36px;border-radius:3px;border:1px solid #ddd;"></a>';
     }
 

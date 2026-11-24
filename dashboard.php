@@ -5,13 +5,12 @@
 $currentMonth = date('Y-m');
 $userId       = (int)$_SESSION['userId'];
 
-// 1. Saldo Disponible: sum of account balances
+// 1. Saldo Disponible: sum of active account balances
 $saldoDisponible = 0.0;
 $stmtSaldo = $connect->prepare(
-    "SELECT COALESCE(SUM(balance), 0) AS total FROM accounts WHERE created_by = ? AND status = 1"
+    "SELECT COALESCE(SUM(current_balance), 0) AS total FROM accounts WHERE status = 1"
 );
 if ($stmtSaldo) {
-    $stmtSaldo->bind_param("i", $userId);
     $stmtSaldo->execute();
     $rSaldo          = $stmtSaldo->get_result();
     $rowSaldo        = $rSaldo->fetch_assoc();
@@ -19,7 +18,7 @@ if ($stmtSaldo) {
     $stmtSaldo->close();
 }
 
-// 2. Total Gastos del Mes
+// 2. Total Gastos del Mes y Total Gastos General
 $totalGastosMes = 0.0;
 $stmtGastos = $connect->prepare(
     "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ?"
@@ -33,10 +32,10 @@ if ($stmtGastos) {
     $stmtGastos->close();
 }
 
-// 3. Total Préstamos Pendientes
+// 3. Total Préstamos Pendientes (por cobrar)
 $totalPrestamosPendientes = 0.0;
 $stmtLoans = $connect->prepare(
-    "SELECT COALESCE(SUM(remaining_balance), 0) AS total FROM loans WHERE created_by = ? AND status = 'active'"
+    "SELECT COALESCE(SUM(balance_pending), 0) AS total FROM loans WHERE created_by = ? AND status IN ('PENDIENTE', 'PARCIAL')"
 );
 if ($stmtLoans) {
     $stmtLoans->bind_param("i", $userId);
@@ -47,8 +46,8 @@ if ($stmtLoans) {
     $stmtLoans->close();
 }
 
-// 4. Balance Total = Saldo Disponible + (Préstamos as liabilities offset)
-$balanceTotal = $saldoDisponible - $totalPrestamosPendientes;
+// 4. Balance Total = Saldo Disponible + Préstamos Pendientes (ver Imagen 4: Saldo 9,420.65 + Préstamo 3,713.00 = 13,133.65)
+$balanceTotal = $saldoDisponible + $totalPrestamosPendientes;
 
 // 5. Quota check for alert banner
 $spendLimit  = null;
@@ -81,10 +80,9 @@ if ($spendLimit && (float)$spendLimit['monthly_limit'] > 0) {
 // 6. Accounts summary table
 $accounts = [];
 $stmtAccounts = $connect->prepare(
-    "SELECT name, account_type, balance FROM accounts WHERE created_by = ? AND status = 1 ORDER BY balance DESC"
+    "SELECT account_name AS name, account_type, current_balance AS balance, currency FROM accounts WHERE status = 1 ORDER BY current_balance DESC"
 );
 if ($stmtAccounts) {
-    $stmtAccounts->bind_param("i", $userId);
     $stmtAccounts->execute();
     $rAccounts = $stmtAccounts->get_result();
     while ($row = $rAccounts->fetch_assoc()) {
@@ -96,7 +94,7 @@ if ($stmtAccounts) {
 // 7. Recent incomes (last 5)
 $recentIncomes = [];
 $stmtInc = $connect->prepare(
-    "SELECT description, amount, income_date AS txn_date, 'ingreso' AS txn_type FROM incomes WHERE created_by = ? ORDER BY income_date DESC, id DESC LIMIT 5"
+    "SELECT concept AS description, amount, income_date AS txn_date, 'ingreso' AS txn_type FROM incomes WHERE created_by = ? ORDER BY income_date DESC, income_id DESC LIMIT 5"
 );
 if ($stmtInc) {
     $stmtInc->bind_param("i", $userId);
@@ -111,7 +109,7 @@ if ($stmtInc) {
 // 8. Recent expenses (last 5)
 $recentExpenses = [];
 $stmtExp = $connect->prepare(
-    "SELECT description, amount, expense_date AS txn_date, 'gasto' AS txn_type FROM expenses WHERE created_by = ? ORDER BY expense_date DESC, id DESC LIMIT 5"
+    "SELECT concept AS description, amount, expense_date AS txn_date, 'gasto' AS txn_type FROM expenses WHERE created_by = ? ORDER BY expense_date DESC, expense_id DESC LIMIT 5"
 );
 if ($stmtExp) {
     $stmtExp->bind_param("i", $userId);
@@ -143,6 +141,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 		margin-bottom: 15px;
 		position: relative;
 		overflow: hidden;
+		box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 	}
 	.stat-card .stat-icon {
 		position: absolute;
@@ -182,7 +181,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 	<button type="button" class="close" data-dismiss="alert" aria-label="Cerrar"><span aria-hidden="true">&times;</span></button>
 	<strong><i class="glyphicon glyphicon-warning-sign"></i> Atención:</strong>
 	Has alcanzado el <strong><?php echo $quotaPct; ?>%</strong> de tu límite mensual de gasto
-	($<?php echo number_format((float)$spendLimit['monthly_limit'], 2); ?>).
+	(S/ <?php echo number_format((float)$spendLimit['monthly_limit'], 2); ?>).
 	<?php if ($quotaAlertClass === 'danger'): ?>
 		Tu gasto está en zona crítica.
 	<?php else: ?>
@@ -197,29 +196,29 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 		<div class="stat-card stat-card-green">
 			<i class="glyphicon glyphicon-usd stat-icon"></i>
 			<div class="stat-label">Saldo Disponible</div>
-			<div class="stat-value">$<?php echo number_format($saldoDisponible, 2); ?></div>
+			<div class="stat-value">S/ <?php echo number_format($saldoDisponible, 2); ?></div>
 		</div>
 	</div>
 	<div class="col-xs-12 col-sm-6 col-md-3">
 		<div class="stat-card stat-card-amber">
 			<i class="glyphicon glyphicon-arrow-down stat-icon"></i>
 			<div class="stat-label">Gastos del Mes</div>
-			<div class="stat-value">$<?php echo number_format($totalGastosMes, 2); ?></div>
+			<div class="stat-value">S/ <?php echo number_format($totalGastosMes, 2); ?></div>
 		</div>
 	</div>
 	<div class="col-xs-12 col-sm-6 col-md-3">
 		<div class="stat-card stat-card-blue">
 			<i class="glyphicon glyphicon-retweet stat-icon"></i>
 			<div class="stat-label">Préstamos Pendientes</div>
-			<div class="stat-value">$<?php echo number_format($totalPrestamosPendientes, 2); ?></div>
+			<div class="stat-value">S/ <?php echo number_format($totalPrestamosPendientes, 2); ?></div>
 		</div>
 	</div>
 	<div class="col-xs-12 col-sm-6 col-md-3">
 		<div class="stat-card stat-card-purple">
 			<i class="glyphicon glyphicon-equalizer stat-icon"></i>
 			<div class="stat-label">Balance Total</div>
-			<div class="stat-value <?php echo $balanceTotal < 0 ? '' : ''; ?>">
-				$<?php echo number_format($balanceTotal, 2); ?>
+			<div class="stat-value">
+				S/ <?php echo number_format($balanceTotal, 2); ?>
 			</div>
 		</div>
 	</div>
@@ -254,7 +253,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 							<td><?php echo htmlspecialchars($acc['name'], ENT_QUOTES, 'UTF-8'); ?></td>
 							<td><span class="label label-default"><?php echo htmlspecialchars($acc['account_type'], ENT_QUOTES, 'UTF-8'); ?></span></td>
 							<td class="text-right <?php echo (float)$acc['balance'] >= 0 ? 'text-success' : 'text-danger'; ?>">
-								$<?php echo number_format((float)$acc['balance'], 2); ?>
+								S/ <?php echo number_format((float)$acc['balance'], 2); ?>
 							</td>
 						</tr>
 						<?php endforeach; ?>
@@ -286,7 +285,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 					<tbody>
 						<?php foreach ($recentTxns as $txn): ?>
 						<tr class="txn-<?php echo htmlspecialchars($txn['txn_type'], ENT_QUOTES, 'UTF-8'); ?>">
-							<td><?php echo htmlspecialchars($txn['txn_date'], ENT_QUOTES, 'UTF-8'); ?></td>
+							<td><?php echo htmlspecialchars(date('d/m/Y', strtotime($txn['txn_date'])), ENT_QUOTES, 'UTF-8'); ?></td>
 							<td><?php echo htmlspecialchars($txn['description'], ENT_QUOTES, 'UTF-8'); ?></td>
 							<td>
 								<?php if ($txn['txn_type'] === 'ingreso'): ?>
@@ -296,7 +295,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 								<?php endif; ?>
 							</td>
 							<td class="text-right <?php echo $txn['txn_type'] === 'ingreso' ? 'text-success' : 'text-danger'; ?>">
-								<?php echo $txn['txn_type'] === 'ingreso' ? '+' : '-'; ?>$<?php echo number_format((float)$txn['amount'], 2); ?>
+								<?php echo $txn['txn_type'] === 'ingreso' ? '+' : '-'; ?>S/ <?php echo number_format((float)$txn['amount'], 2); ?>
 							</td>
 						</tr>
 						<?php endforeach; ?>

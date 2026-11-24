@@ -5,13 +5,13 @@ header('Content-Type: application/json');
 $userId = (int)$_SESSION['userId'];
 
 $stmt = $connect->prepare("
-    SELECT l.id, l.borrower_name, l.concept, a.account_name,
+    SELECT l.loan_id AS id, l.borrower_name, l.concept, a.account_name,
            l.loan_date, l.due_date, l.principal_amount,
            l.interest_type, l.interest_value, l.total_receivable,
            l.amount_repaid, l.balance_pending, l.status, l.notes,
            l.account_id
     FROM loans l
-    LEFT JOIN accounts a ON l.account_id = a.id
+    LEFT JOIN accounts a ON l.account_id = a.account_id
     WHERE l.created_by = ?
     ORDER BY l.loan_date DESC
 ");
@@ -41,8 +41,8 @@ while ($row = $result->fetch_assoc()) {
             break;
     }
 
-    $interestInfo = $row['interest_type'] === 'NINGUNO' ? '-'
-        : ($row['interest_type'] === 'PORCENTAJE' ? number_format((float)$row['interest_value'],1).'%'
+    $interestInfo = $row['interest_type'] === 'NONE' || $row['interest_type'] === 'NINGUNO' ? '-'
+        : ($row['interest_type'] === 'PERCENTAGE' || $row['interest_type'] === 'PORCENTAJE' ? number_format((float)$row['interest_value'],1).'%'
             : 'S/ '.number_format((float)$row['interest_value'],2));
 
     $dueDate = $row['due_date'] ? date('d/m/Y', strtotime($row['due_date'])) : '-';

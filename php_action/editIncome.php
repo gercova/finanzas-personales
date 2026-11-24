@@ -13,12 +13,15 @@ $project_id  = !empty($_POST['project_id'])  ? (int)$_POST['project_id']  : null
 $income_date = cleanInput($_POST['income_date']  ?? '');
 $amount      = (float)($_POST['amount']          ?? 0);
 $is_recurring = isset($_POST['is_recurring']) && $_POST['is_recurring'] == '1' ? 1 : 0;
-$status      = cleanInput($_POST['status']       ?? 'ACTIVO');
+$status      = cleanInput($_POST['status']       ?? 'CONFIRMED');
 $notes       = cleanInput($_POST['notes']        ?? '');
 $userId      = (int)$_SESSION['userId'];
 
-$validStatuses = ['ACTIVO', 'PENDIENTE', 'CANCELADO'];
-if (!in_array($status, $validStatuses)) $status = 'ACTIVO';
+$validStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'ACTIVO', 'PENDIENTE', 'CANCELADO'];
+if (!in_array($status, $validStatuses)) $status = 'CONFIRMED';
+if ($status === 'ACTIVO') $status = 'CONFIRMED';
+if ($status === 'PENDIENTE') $status = 'PENDING';
+if ($status === 'CANCELADO') $status = 'CANCELLED';
 
 if ($income_id <= 0 || empty($concept) || $account_id <= 0 || $amount <= 0 || empty($income_date)) {
     echo json_encode(['success' => false, 'messages' => 'Datos incompletos o inválidos.']);
@@ -26,7 +29,7 @@ if ($income_id <= 0 || empty($concept) || $account_id <= 0 || $amount <= 0 || em
 }
 
 // Get old amount and account for balance adjustment
-$stmtOld = $connect->prepare("SELECT amount, account_id FROM incomes WHERE id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT amount, account_id FROM incomes WHERE income_id=? AND created_by=?");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $income_id, $userId);
 $stmtOld->execute();
@@ -36,16 +39,16 @@ if (!$old) { echo json_encode(['success'=>false,'messages'=>'Registro no encontr
 
 $stmt = $connect->prepare(
     "UPDATE incomes SET concept=?, account_id=?, category_id=?, project_id=?, income_date=?, amount=?, is_recurring=?, status=?, notes=?
-     WHERE id=? AND created_by=?"
+     WHERE income_id=? AND created_by=?"
 );
-if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta.']); exit; }
+if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta: ' . $connect->error]); exit; }
 $stmt->bind_param("siiiidissii", $concept, $account_id, $category_id, $project_id, $income_date, $amount, $is_recurring, $status, $notes, $income_id, $userId);
 
 if ($stmt->execute()) {
     // Reverse old account balance, apply new
-    $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?");
+    $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
     if ($stmtAcc) { $stmtAcc->bind_param("di", $old['amount'], $old['account_id']); $stmtAcc->execute(); $stmtAcc->close(); }
-    $stmtAcc2 = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?");
+    $stmtAcc2 = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
     if ($stmtAcc2) { $stmtAcc2->bind_param("di", $amount, $account_id); $stmtAcc2->execute(); $stmtAcc2->close(); }
     echo json_encode(['success'=>true,'messages'=>'Ingreso actualizado exitosamente.']);
 } else {

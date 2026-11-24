@@ -5,13 +5,13 @@ header('Content-Type: application/json');
 $userId = (int)$_SESSION['userId'];
 
 $stmt = $connect->prepare("
-    SELECT i.id, i.concept, a.account_name, fc.category_name,
+    SELECT i.income_id AS id, i.concept, a.account_name, fc.category_name,
            p.project_name, i.income_date, i.amount, i.is_recurring, i.status, i.notes,
            i.account_id, i.category_id, i.project_id
     FROM incomes i
-    LEFT JOIN accounts a ON i.account_id = a.id
-    LEFT JOIN financial_categories fc ON i.category_id = fc.id
-    LEFT JOIN projects p ON i.project_id = p.id
+    LEFT JOIN accounts a ON i.account_id = a.account_id
+    LEFT JOIN financial_categories fc ON i.category_id = fc.category_id
+    LEFT JOIN projects p ON i.project_id = p.project_id
     WHERE i.created_by = ?
     ORDER BY i.income_date DESC
 ");
@@ -25,8 +25,11 @@ $no = 1;
 while ($row = $result->fetch_assoc()) {
     $statusBadge = '';
     switch ($row['status']) {
-        case 'ACTIVO':    $statusBadge = '<span class="label label-success">ACTIVO</span>'; break;
+        case 'CONFIRMED':
+        case 'ACTIVO':    $statusBadge = '<span class="label label-success">CONFIRMADO</span>'; break;
+        case 'PENDING':
         case 'PENDIENTE': $statusBadge = '<span class="label label-warning">PENDIENTE</span>'; break;
+        case 'CANCELLED':
         case 'CANCELADO': $statusBadge = '<span class="label label-default">CANCELADO</span>'; break;
         default:          $statusBadge = '<span class="label label-default">'.htmlspecialchars($row['status']).'</span>';
     }

@@ -25,7 +25,7 @@ if ($expense_id <= 0 || empty($concept) || $account_id <= 0 || $amount <= 0 || e
 }
 
 // Get old record
-$stmtOld = $connect->prepare("SELECT amount, account_id, status, receipt_image FROM expenses WHERE id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT amount, account_id, status, receipt_image FROM expenses WHERE expense_id=? AND created_by=?");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $expense_id, $userId);
 $stmtOld->execute();
@@ -57,13 +57,12 @@ if (!empty($_FILES['receipt_image']['name'])) {
     }
 }
 
-// 11 params: s,i,i,i,s,d,s,s,s,i,i
 $stmt = $connect->prepare(
     "UPDATE expenses SET concept=?, account_id=?, category_id=?, project_id=?, expense_date=?, amount=?, status=?, receipt_image=?, notes=?
-     WHERE id=? AND created_by=?"
+     WHERE expense_id=? AND created_by=?"
 );
-if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta.']); exit; }
-$stmt->bind_param("siiiidsssi i",
+if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta: ' . $connect->error]); exit; }
+$stmt->bind_param("siiiidsssii",
     $concept, $account_id, $category_id, $project_id,
     $expense_date, $amount, $status, $receipt_image, $notes,
     $expense_id, $userId
@@ -72,12 +71,12 @@ $stmt->bind_param("siiiidsssi i",
 if ($stmt->execute()) {
     // Reverse old balance effect
     if ($old['status'] === 'PAGADO') {
-        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?");
+        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
         if ($s) { $s->bind_param("di", $old['amount'], $old['account_id']); $s->execute(); $s->close(); }
     }
     // Apply new balance effect
     if ($status === 'PAGADO') {
-        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?");
+        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
         if ($s) { $s->bind_param("di", $amount, $account_id); $s->execute(); $s->close(); }
     }
     echo json_encode(['success'=>true,'messages'=>'Gasto actualizado exitosamente.']);

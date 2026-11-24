@@ -131,4 +131,50 @@ $(document).ready(function() {
 		} // /else
 		return false;
 	});
+
+	// Spending limit form submission
+	$("#spendingLimitForm").unbind('submit').bind('submit', function(e) {
+		e.preventDefault();
+		var form = $(this);
+		var btn = $("#saveSpendingLimitBtn");
+		btn.prop('disabled', true);
+
+		$.ajax({
+			url: form.attr('action'),
+			type: form.attr('method'),
+			data: form.serialize(),
+			dataType: 'json',
+			success: function(response) {
+				btn.prop('disabled', false);
+				if(response.success == true) {
+					$('.spendingLimitMessages').html(
+						'<div class="alert alert-success alert-dismissible" role="alert">'+
+							'<button type="button" class="close" data-dismiss="alert">&times;</button>'+
+							'<strong><i class="glyphicon glyphicon-ok-sign"></i></strong> ' + response.messages +
+						'</div>'
+					);
+					setTimeout(function() {
+						window.location.reload();
+					}, 1200);
+				} else {
+					$('.spendingLimitMessages').html(
+						'<div class="alert alert-danger alert-dismissible" role="alert">'+
+							'<button type="button" class="close" data-dismiss="alert">&times;</button>'+
+							'<strong><i class="glyphicon glyphicon-exclamation-sign"></i></strong> ' + response.messages +
+						'</div>'
+					);
+				}
+			},
+			error: function() {
+				btn.prop('disabled', false);
+				$('.spendingLimitMessages').html(
+					'<div class="alert alert-danger alert-dismissible" role="alert">'+
+						'<button type="button" class="close" data-dismiss="alert">&times;</button>'+
+						'<strong><i class="glyphicon glyphicon-exclamation-sign"></i></strong> Error de comunicación con el servidor.'+
+					'</div>'
+				);
+			}
+		});
+		return false;
+	});
 }); // /document

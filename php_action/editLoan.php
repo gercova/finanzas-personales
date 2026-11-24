@@ -12,15 +12,18 @@ $account_id       = (int)($_POST['account_id']           ?? 0);
 $loan_date        = cleanInput($_POST['loan_date']       ?? '');
 $due_date         = !empty($_POST['due_date']) ? cleanInput($_POST['due_date']) : null;
 $principal_amount = (float)($_POST['principal_amount']   ?? 0);
-$interest_type    = cleanInput($_POST['interest_type']   ?? 'NINGUNO');
+$interest_type    = cleanInput($_POST['interest_type']   ?? 'NONE');
 $interest_value   = !empty($_POST['interest_value']) ? (float)$_POST['interest_value'] : null;
 $status           = cleanInput($_POST['status']          ?? 'PENDIENTE');
 $notes            = cleanInput($_POST['notes']           ?? '');
 $userId           = (int)$_SESSION['userId'];
 
-$validTypes    = ['NINGUNO','PORCENTAJE','FIJO'];
+$validTypes    = ['NONE','PERCENTAGE','FIXED','NINGUNO','PORCENTAJE','FIJO'];
 $validStatuses = ['PENDIENTE','PARCIAL','PAGADO'];
-if (!in_array($interest_type, $validTypes)) $interest_type = 'NINGUNO';
+if (!in_array($interest_type, $validTypes)) $interest_type = 'NONE';
+if ($interest_type === 'NINGUNO') $interest_type = 'NONE';
+if ($interest_type === 'PORCENTAJE') $interest_type = 'PERCENTAGE';
+if ($interest_type === 'FIJO') $interest_type = 'FIXED';
 if (!in_array($status, $validStatuses)) $status = 'PENDIENTE';
 
 if ($loan_id <= 0 || empty($borrower_name) || $account_id <= 0 || $principal_amount <= 0 || empty($loan_date)) {
@@ -29,7 +32,7 @@ if ($loan_id <= 0 || empty($borrower_name) || $account_id <= 0 || $principal_amo
 }
 
 // Ownership check + get old data
-$stmtOld = $connect->prepare("SELECT principal_amount, account_id, amount_repaid FROM loans WHERE id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT principal_amount, account_id, amount_repaid FROM loans WHERE loan_id=? AND created_by=?");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $loan_id, $userId);
 $stmtOld->execute();
@@ -38,9 +41,9 @@ $stmtOld->close();
 if (!$old) { echo json_encode(['success'=>false,'messages'=>'Registro no encontrado.']); exit; }
 
 // Recalculate
-if ($interest_type === 'PORCENTAJE' && $interest_value > 0) {
+if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
     $total_receivable = $principal_amount + ($principal_amount * $interest_value / 100);
-} elseif ($interest_type === 'FIJO' && $interest_value > 0) {
+} elseif ($interest_type === 'FIXED' && $interest_value > 0) {
     $total_receivable = $principal_amount + $interest_value;
 } else {
     $total_receivable = $principal_amount;
@@ -50,10 +53,10 @@ $balance_pending = max(0, $total_receivable - (float)$old['amount_repaid']);
 
 $stmt = $connect->prepare(
     "UPDATE loans SET borrower_name=?, concept=?, account_id=?, loan_date=?, due_date=?, principal_amount=?, interest_type=?, interest_value=?, total_receivable=?, balance_pending=?, status=?, notes=?
-     WHERE id=? AND created_by=?"
+     WHERE loan_id=? AND created_by=?"
 );
-if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta.']); exit; }
-$stmt->bind_param("ssississddssii",
+if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta: ' . $connect->error]); exit; }
+$stmt->bind_param("ssissdsddssii",
     $borrower_name, $concept, $account_id, $loan_date, $due_date,
     $principal_amount, $interest_type, $interest_value,
     $total_receivable, $balance_pending, $status, $notes,

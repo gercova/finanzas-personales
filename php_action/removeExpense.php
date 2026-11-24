@@ -13,7 +13,7 @@ if ($expense_id <= 0) {
     exit;
 }
 
-$stmtOld = $connect->prepare("SELECT amount, account_id, status, receipt_image FROM expenses WHERE id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT amount, account_id, status, receipt_image FROM expenses WHERE expense_id=? AND created_by=?");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $expense_id, $userId);
 $stmtOld->execute();
@@ -21,7 +21,7 @@ $old = $stmtOld->get_result()->fetch_assoc();
 $stmtOld->close();
 if (!$old) { echo json_encode(['success'=>false,'messages'=>'Registro no encontrado.']); exit; }
 
-$stmt = $connect->prepare("DELETE FROM expenses WHERE id=? AND created_by=?");
+$stmt = $connect->prepare("DELETE FROM expenses WHERE expense_id=? AND created_by=?");
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta.']); exit; }
 $stmt->bind_param("ii", $expense_id, $userId);
 
@@ -32,7 +32,7 @@ if ($stmt->execute()) {
     }
     // Reverse balance
     if ($old['status'] === 'PAGADO') {
-        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?");
+        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
         if ($s) { $s->bind_param("di", $old['amount'], $old['account_id']); $s->execute(); $s->close(); }
     }
     echo json_encode(['success'=>true,'messages'=>'Gasto eliminado exitosamente.']);

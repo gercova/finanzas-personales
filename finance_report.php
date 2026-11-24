@@ -4,7 +4,7 @@
 $userId = (int)$_SESSION['userId'];
 
 // ── 1. Saldo Disponible ────────────────────────────────────────────────────
-$stmtSaldo = $connect->prepare("SELECT COALESCE(SUM(current_balance),0) AS total FROM accounts WHERE is_active=1");
+$stmtSaldo = $connect->prepare("SELECT COALESCE(SUM(current_balance),0) AS total FROM accounts WHERE status=1");
 $saldoDisponible = 0;
 if ($stmtSaldo) { $stmtSaldo->execute(); $saldoDisponible = (float)$stmtSaldo->get_result()->fetch_assoc()['total']; $stmtSaldo->close(); }
 
@@ -41,7 +41,7 @@ $ingresosAnio = 0;
 if ($stmtIngAnio) { $stmtIngAnio->bind_param("ii",$currentYear,$userId); $stmtIngAnio->execute(); $ingresosAnio=(float)$stmtIngAnio->get_result()->fetch_assoc()['total']; $stmtIngAnio->close(); }
 
 // ── 7. Accounts summary ──────────────────────────────────────────────────
-$stmtAccs = $connect->prepare("SELECT account_name, account_type, current_balance, currency FROM accounts WHERE is_active=1 ORDER BY current_balance DESC");
+$stmtAccs = $connect->prepare("SELECT account_name, account_type, current_balance, currency FROM accounts WHERE status=1 ORDER BY current_balance DESC");
 $accList = [];
 if ($stmtAccs) { $stmtAccs->execute(); $r=$stmtAccs->get_result(); while($row=$r->fetch_assoc()) $accList[]=$row; $stmtAccs->close(); }
 
@@ -60,7 +60,7 @@ if ($stmtMonthly) { $stmtMonthly->bind_param("i",$userId); $stmtMonthly->execute
 $stmtTopCat = $connect->prepare("
     SELECT fc.category_name, COALESCE(SUM(e.amount),0) AS total
     FROM expenses e
-    LEFT JOIN financial_categories fc ON e.category_id=fc.id
+    LEFT JOIN financial_categories fc ON e.category_id=fc.category_id
     WHERE e.created_by=? AND YEAR(e.expense_date)=?
     GROUP BY fc.category_name ORDER BY total DESC LIMIT 5
 ");

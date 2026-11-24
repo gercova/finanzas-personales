@@ -50,17 +50,15 @@ $stmt = $connect->prepare(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error preparando consulta.']);
+    echo json_encode(['success' => false, 'messages' => 'Error preparando consulta: ' . $connect->error]);
     exit;
 }
-$stmt->bind_param("siiiidssi", $concept, $account_id, $category_id, $project_id, $expense_date, $amount, $status, $receipt_image, $notes, $userId);
-// Fix: 10 params: s,i,i,i,i,d,s,s,s,i
 $stmt->bind_param("siiiidsssi", $concept, $account_id, $category_id, $project_id, $expense_date, $amount, $status, $receipt_image, $notes, $userId);
 
 if ($stmt->execute()) {
     // Deduct from account
     if ($status === 'PAGADO') {
-        $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE id = ?");
+        $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
         if ($stmtAcc) { $stmtAcc->bind_param("di", $amount, $account_id); $stmtAcc->execute(); $stmtAcc->close(); }
     }
     echo json_encode(['success' => true, 'messages' => 'Gasto registrado exitosamente.']);

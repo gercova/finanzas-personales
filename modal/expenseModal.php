@@ -192,16 +192,16 @@
 <?php
 // Accounts and categories for JS injection (expense page)
 $expAccounts = [];
-$stmtExpAcc = $connect->prepare("SELECT id, account_name, account_type FROM accounts WHERE is_active=1 ORDER BY account_name");
+$stmtExpAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
 if ($stmtExpAcc) { $stmtExpAcc->execute(); $r=$stmtExpAcc->get_result(); while($row=$r->fetch_assoc()) $expAccounts[]=$row; $stmtExpAcc->close(); }
 
 $expCategories = [];
-$stmtExpCat = $connect->prepare("SELECT id, category_name FROM financial_categories WHERE category_type IN ('EXPENSE','BOTH') AND is_active=1 ORDER BY category_name");
+$stmtExpCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'EXPENSE' AND status=1 ORDER BY category_name");
 if ($stmtExpCat) { $stmtExpCat->execute(); $r=$stmtExpCat->get_result(); while($row=$r->fetch_assoc()) $expCategories[]=$row; $stmtExpCat->close(); }
 
 $expProjects = [];
-$stmtExpProj = $connect->prepare("SELECT id, project_name FROM projects WHERE status='ACTIVO' AND created_by=? ORDER BY project_name");
-if ($stmtExpProj) { $stmtExpProj->bind_param("i",$_SESSION['userId']); $stmtExpProj->execute(); $r=$stmtExpProj->get_result(); while($row=$r->fetch_assoc()) $expProjects[]=$row; $stmtExpProj->close(); }
+$stmtExpProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' ORDER BY project_name");
+if ($stmtExpProj) { $stmtExpProj->execute(); $r=$stmtExpProj->get_result(); while($row=$r->fetch_assoc()) $expProjects[]=$row; $stmtExpProj->close(); }
 ?>
 <script>
 var expenseAccounts   = <?php echo json_encode($expAccounts); ?>;

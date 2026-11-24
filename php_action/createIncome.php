@@ -12,12 +12,15 @@ $project_id  = !empty($_POST['project_id'])  ? (int)$_POST['project_id']  : null
 $income_date = cleanInput($_POST['income_date'] ?? '');
 $amount      = (float)($_POST['amount']         ?? 0);
 $is_recurring = isset($_POST['is_recurring']) && $_POST['is_recurring'] == '1' ? 1 : 0;
-$status      = cleanInput($_POST['status']      ?? 'ACTIVO');
+$status      = cleanInput($_POST['status']      ?? 'CONFIRMED');
 $notes       = cleanInput($_POST['notes']       ?? '');
 $userId      = (int)$_SESSION['userId'];
 
-$validStatuses = ['ACTIVO', 'PENDIENTE', 'CANCELADO'];
-if (!in_array($status, $validStatuses)) $status = 'ACTIVO';
+$validStatuses = ['CONFIRMED', 'PENDING', 'CANCELLED', 'ACTIVO', 'PENDIENTE', 'CANCELADO'];
+if (!in_array($status, $validStatuses)) $status = 'CONFIRMED';
+if ($status === 'ACTIVO') $status = 'CONFIRMED';
+if ($status === 'PENDIENTE') $status = 'PENDING';
+if ($status === 'CANCELADO') $status = 'CANCELLED';
 
 if (empty($concept) || $account_id <= 0 || $amount <= 0 || empty($income_date)) {
     echo json_encode(['success' => false, 'messages' => 'Datos incompletos o inválidos.']);
@@ -29,14 +32,14 @@ $stmt = $connect->prepare(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error preparando consulta.']);
+    echo json_encode(['success' => false, 'messages' => 'Error preparando consulta: ' . $connect->error]);
     exit;
 }
 $stmt->bind_param("siiiidissi", $concept, $account_id, $category_id, $project_id, $income_date, $amount, $is_recurring, $status, $notes, $userId);
 
 if ($stmt->execute()) {
     // Update account balance
-    $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE id = ?");
+    $stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
     if ($stmtAcc) { $stmtAcc->bind_param("di", $amount, $account_id); $stmtAcc->execute(); $stmtAcc->close(); }
     echo json_encode(['success' => true, 'messages' => 'Ingreso registrado exitosamente.']);
 } else {

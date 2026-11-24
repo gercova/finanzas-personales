@@ -29,7 +29,7 @@ if ($stmtYear) {
 }
 
 $stmtRec = $connect->prepare(
-    "SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='ACTIVO' AND created_by=?"
+    "SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=?"
 );
 $totalRecurring = 0;
 if ($stmtRec) {
@@ -40,7 +40,7 @@ if ($stmtRec) {
 }
 
 // Accounts for select
-$stmtAcc = $connect->prepare("SELECT id, account_name, account_type FROM accounts WHERE is_active=1 ORDER BY account_name");
+$stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
 $accounts = [];
 if ($stmtAcc) {
     $stmtAcc->execute();
@@ -50,7 +50,7 @@ if ($stmtAcc) {
 }
 
 // Financial categories
-$stmtCat = $connect->prepare("SELECT id, category_name FROM financial_categories WHERE category_type IN ('INCOME','BOTH') AND is_active=1 ORDER BY category_name");
+$stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'INCOME' AND status=1 ORDER BY category_name");
 $finCategories = [];
 if ($stmtCat) {
     $stmtCat->execute();
@@ -60,10 +60,9 @@ if ($stmtCat) {
 }
 
 // Projects
-$stmtProj = $connect->prepare("SELECT id, project_name FROM projects WHERE status='ACTIVO' AND created_by=? ORDER BY project_name");
+$stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' ORDER BY project_name");
 $projects = [];
 if ($stmtProj) {
-    $stmtProj->bind_param("i", $_SESSION['userId']);
     $stmtProj->execute();
     $resProj = $stmtProj->get_result();
     while ($row = $resProj->fetch_assoc()) $projects[] = $row;

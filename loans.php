@@ -37,7 +37,7 @@ if ($stmtTotalPendiente) {
 
 // Accounts
 $loanAccounts = [];
-$stmtLA = $connect->prepare("SELECT id, account_name, account_type FROM accounts WHERE is_active=1 ORDER BY account_name");
+$stmtLA = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
 if ($stmtLA) { $stmtLA->execute(); $r=$stmtLA->get_result(); while($row=$r->fetch_assoc()) $loanAccounts[]=$row; $stmtLA->close(); }
 ?>
 <?php require_once 'modal/loanModal.php'; ?>
