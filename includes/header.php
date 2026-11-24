@@ -6,7 +6,7 @@
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="csrf-token" content="<?php echo getCsrfToken(); ?>">
-	<title><?php echo htmlspecialchars(env('APP_NAME', 'Finanzas Personales'), ENT_QUOTES, 'UTF-8'); ?></title>
+	<title><?php echo htmlspecialchars(env('APP_NAME', 'myFin'), ENT_QUOTES, 'UTF-8'); ?></title>
 	<!-- bootstrap -->
 	<link rel="stylesheet" href="assests/bootstrap/css/bootstrap.min.css">
 	<!-- bootstrap theme-->
@@ -38,142 +38,116 @@
 	</script>
 	<style type="text/css">
 		/* ==============================================================
-		   MODERN EXECUTIVE FINTECH NAVBAR (High-contrast Dark Theme)
-		   Overrides bootstrap-theme gradient cleanly with !important
+		   CLASSIC BOOTSTRAP LIGHT NAVBAR (Matching User Reference Image)
 		   ============================================================== */
 		.navbar-default {
-			background-color: #1e293b !important;
-			background-image: none !important;
-			border-color: #0f172a !important;
-			border-radius: 0 !important;
-			box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
-			margin-bottom: 22px;
+			background-color: #f8f8f8;
+			background-image: -webkit-linear-gradient(top, #ffffff 0%, #f8f8f8 100%) !important;
+			background-image: linear-gradient(to bottom, #ffffff 0%, #f8f8f8 100%) !important;
+			background-repeat: repeat-x;
+			border-color: #e7e7e7 !important;
+			border-radius: 4px;
+			-webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 1px 5px rgba(0,0,0,.075) !important;
+			box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 1px 5px rgba(0,0,0,.075) !important;
+			margin-bottom: 20px;
 		}
 		.navbar-default .navbar-brand {
-			color: #ffffff !important;
-			font-size: 17px;
+			color: #333333 !important;
 			font-weight: 700;
-			letter-spacing: 0.4px;
-			padding: 15px 16px;
-			transition: color 0.2s ease;
-		}
-		.navbar-default .navbar-brand i {
-			color: #10b981;
 			font-size: 19px;
-			margin-right: 6px;
-			vertical-align: middle;
+			letter-spacing: -0.2px;
+			padding: 15px 15px;
+			display: inline-flex;
+			align-items: center;
+			gap: 6px;
+			text-shadow: 0 1px 0 #fff;
 		}
 		.navbar-default .navbar-brand:hover {
-			color: #38bdf8 !important;
+			color: #111111 !important;
 		}
 		.navbar-default .navbar-nav > li > a {
-			color: #cbd5e1 !important;
-			font-weight: 500;
+			color: #555555 !important;
 			font-size: 13.5px;
+			font-weight: 500;
 			padding: 15px 12px;
-			transition: all 0.2s ease;
+			text-shadow: 0 1px 0 rgba(255,255,255,.5);
+			transition: background-color 0.15s ease, color 0.15s ease;
 		}
 		.navbar-default .navbar-nav > li > a:hover {
-			color: #ffffff !important;
-			background-color: rgba(255, 255, 255, 0.08) !important;
-			background-image: none !important;
+			color: #222222 !important;
+			background-color: #e7e7e7 !important;
+			background-image: -webkit-linear-gradient(top, #f2f2f2 0%, #e7e7e7 100%) !important;
+			background-image: linear-gradient(to bottom, #f2f2f2 0%, #e7e7e7 100%) !important;
+			background-repeat: repeat-x;
 		}
+		/* Active tab with grey gradient button styling (matching screenshot) */
 		.navbar-default .navbar-nav > .active > a,
 		.navbar-default .navbar-nav > .active > a:hover,
 		.navbar-default .navbar-nav > .active > a:focus {
-			color: #ffffff !important;
-			background-color: #2563eb !important;
-			background-image: none !important;
-			box-shadow: inset 0 -3px 0 #60a5fa, 0 2px 4px rgba(0,0,0,0.2) !important;
+			color: #333333 !important;
+			background-color: #e2e2e2 !important;
+			background-image: -webkit-linear-gradient(top, #dbdbdb 0%, #e2e2e2 100%) !important;
+			background-image: linear-gradient(to bottom, #dbdbdb 0%, #e2e2e2 100%) !important;
+			background-repeat: repeat-x !important;
+			-webkit-box-shadow: inset 0 3px 9px rgba(0,0,0,.075) !important;
+			box-shadow: inset 0 3px 9px rgba(0,0,0,.075) !important;
 			font-weight: 600;
 		}
+		/* Open dropdown */
 		.navbar-default .navbar-nav > .open > a,
 		.navbar-default .navbar-nav > .open > a:hover,
 		.navbar-default .navbar-nav > .open > a:focus {
-			color: #ffffff !important;
-			background-color: #0f172a !important;
-			background-image: none !important;
+			background-color: #e2e2e2 !important;
+			background-image: -webkit-linear-gradient(top, #dbdbdb 0%, #e2e2e2 100%) !important;
+			background-image: linear-gradient(to bottom, #dbdbdb 0%, #e2e2e2 100%) !important;
+			color: #333333 !important;
+			box-shadow: inset 0 3px 9px rgba(0,0,0,.075) !important;
 		}
-		/* Dropdown Menu */
 		.navbar-default .navbar-nav .dropdown-menu {
-			background-color: #1e293b !important;
-			border: 1px solid #334155 !important;
-			border-radius: 6px !important;
-			box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.45) !important;
-			padding: 6px 0;
-			margin-top: 4px;
+			background-color: #ffffff !important;
+			border: 1px solid #ccc !important;
+			border-radius: 4px !important;
+			box-shadow: 0 6px 12px rgba(0,0,0,.175) !important;
 		}
 		.navbar-default .navbar-nav .dropdown-menu > li > a {
-			color: #e2e8f0 !important;
-			padding: 9px 18px;
-			font-size: 13px;
-			transition: background 0.15s ease;
+			color: #333333 !important;
+			padding: 7px 18px !important;
 		}
 		.navbar-default .navbar-nav .dropdown-menu > li > a:hover {
-			background-color: #2563eb !important;
+			background-color: #f5f5f5 !important;
 			background-image: none !important;
-			color: #ffffff !important;
+			color: #262626 !important;
 		}
-		.navbar-default .navbar-nav .dropdown-menu .divider {
-			background-color: #334155 !important;
-			margin: 5px 0;
-		}
-		/* Mobile Navbar Toggle Button */
-		.navbar-default .navbar-toggle {
-			border-color: #475569 !important;
-			background-color: rgba(255,255,255,0.06) !important;
-			margin-top: 10px;
-			margin-bottom: 10px;
-		}
-		.navbar-default .navbar-toggle:hover,
-		.navbar-default .navbar-toggle:focus {
-			background-color: rgba(255,255,255,0.12) !important;
-		}
-		.navbar-default .navbar-toggle .icon-bar {
-			background-color: #f8fafc !important;
-		}
-		/* Azure Quota Container */
-		.navbar-quota-bar {
-			padding: 6px 14px;
-			min-width: 195px;
-			display: inline-block;
+		/* Metric badges on the left next to myFin */
+		.myfin-metrics-container {
+			display: inline-flex;
+			align-items: center;
+			gap: 8px;
+			margin-left: 10px;
 			vertical-align: middle;
-			background: rgba(15, 23, 42, 0.7);
-			border: 1px solid rgba(255, 255, 255, 0.14);
-			border-radius: 6px;
-			margin-top: 8px;
-			margin-bottom: 8px;
-			margin-left: 12px;
+			height: 50px;
 		}
-		.navbar-quota-bar .quota-label {
-			font-size: 10px;
-			font-weight: 700;
-			color: #94a3b8;
-			text-transform: uppercase;
-			letter-spacing: 0.5px;
-			margin-bottom: 2px;
-		}
-		.navbar-quota-bar .progress {
-			margin-bottom: 0;
-			height: 7px;
+		.metric-badge {
+			display: inline-flex;
+			align-items: center;
+			gap: 5px;
+			padding: 5px 9px;
 			border-radius: 4px;
-			background-color: #334155;
-			overflow: hidden;
+			font-size: 11.5px;
+			font-weight: 600;
+			line-height: 1.2;
+			box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+			white-space: nowrap;
 		}
-		.navbar-quota-bar .quota-text {
-			font-size: 10.5px;
-			color: #e2e8f0;
-			margin-top: 2px;
-			font-weight: 500;
+		.metric-badge-income {
+			background-color: #dff0d8;
+			color: #2e7d32;
+			border: 1px solid #c8e6c9;
 		}
-		/* Mobile responsive adjustments */
-		@media (max-width: 767px) {
-			.navbar-default .navbar-nav > li > a {
-				border-bottom: 1px solid #334155;
-			}
-			.navbar-default .navbar-collapse {
-				border-color: #334155;
-			}
+		.metric-badge-expense {
+			background-color: #fce4ec;
+			color: #c2185b;
+			border: 1px solid #f8bbd0;
 		}
 
 		/* ==============================================================
@@ -240,88 +214,62 @@
 </head>
 <body>
 <?php
-// ── Spending quota data for navbar bar ──────────────────────────────────────
+// ── Data calculations for header metrics ────────────────────────────────────
+$userId       = (int)$_SESSION['userId'];
 $currentMonth = date('Y-m');
-$spendLimit   = null;
-$stmt = $connect->prepare(
-    "SELECT monthly_limit, warning_threshold, critical_threshold FROM spending_limits WHERE month_year = ?"
-);
-if ($stmt) {
-    $stmt->bind_param("s", $currentMonth);
-    $stmt->execute();
-    $r         = $stmt->get_result();
-    $spendLimit = $r->fetch_assoc();
-    $stmt->close();
-}
-$monthlySpent = 0;
-$stmt2 = $connect->prepare(
-    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ?"
-);
-if ($stmt2) {
-    $stmt2->bind_param("si", $currentMonth, $_SESSION['userId']);
-    $stmt2->execute();
-    $r2           = $stmt2->get_result();
-    $row2         = $r2->fetch_assoc();
-    $monthlySpent = (float)$row2['total'];
-    $stmt2->close();
+$todayDate    = date('Y-m-d');
+
+// 1. Ingresos del mes actual
+$monthIncome = 0.0;
+$stmtMI = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE DATE_FORMAT(income_date, '%Y-%m') = ? AND created_by = ?");
+if ($stmtMI) {
+    $stmtMI->bind_param("si", $currentMonth, $userId);
+    $stmtMI->execute();
+    $monthIncome = (float)$stmtMI->get_result()->fetch_assoc()['total'];
+    $stmtMI->close();
 }
 
-// Compute quota percentage
-$quotaPct       = 0;
-$quotaBarClass  = 'success';
-if ($spendLimit && (float)$spendLimit['monthly_limit'] > 0) {
-    $quotaPct = round(($monthlySpent / (float)$spendLimit['monthly_limit']) * 100, 1);
-    $warn     = isset($spendLimit['warning_threshold'])  ? (float)$spendLimit['warning_threshold']  : 75;
-    $crit     = isset($spendLimit['critical_threshold']) ? (float)$spendLimit['critical_threshold'] : 90;
-    if ($quotaPct >= $crit) {
-        $quotaBarClass = 'danger';
-    } elseif ($quotaPct >= $warn) {
-        $quotaBarClass = 'warning';
-    } else {
-        $quotaBarClass = 'success';
-    }
+// 2. Gastos del día de hoy
+$todayExpenses = 0.0;
+$stmtTE = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE expense_date = ? AND created_by = ?");
+if ($stmtTE) {
+    $stmtTE->bind_param("si", $todayDate, $userId);
+    $stmtTE->execute();
+    $todayExpenses = (float)$stmtTE->get_result()->fetch_assoc()['total'];
+    $stmtTE->close();
 }
-$quotaPctCapped = min($quotaPct, 100);
+
 // Determine current page for active-state
 $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 	<nav class="navbar navbar-default navbar-static-top">
 		<div class="container">
-			<!-- Brand and toggle -->
-			<div class="navbar-header">
+			<!-- Brand and metrics on the left -->
+			<div class="navbar-header" style="display: flex; align-items: center;">
 				<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#financeNavbar" aria-expanded="false">
 					<span class="sr-only">Toggle navigation</span>
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="dashboard.php">
-					<i class="glyphicon glyphicon-piggy-bank"></i> <?php echo htmlspecialchars(env('APP_NAME', 'Finanzas Personales'), ENT_QUOTES, 'UTF-8'); ?>
+				<a class="navbar-brand" href="dashboard.php" title="myFin - Gestión de Finanzas Personales">
+					<i class="glyphicon glyphicon-piggy-bank" style="color: #27ae60;"></i> myFin
 				</a>
-			</div>
 
-			<?php if ($spendLimit): ?>
-			<!-- Azure-style spending quota bar (desktop only) -->
-			<div class="navbar-quota-bar hidden-xs hidden-sm">
-				<div class="quota-label">Gasto mensual</div>
-				<div class="progress">
-					<div class="progress-bar progress-bar-<?php echo $quotaBarClass; ?>"
-						 role="progressbar"
-						 aria-valuenow="<?php echo $quotaPctCapped; ?>"
-						 aria-valuemin="0" aria-valuemax="100"
-						 style="width:<?php echo $quotaPctCapped; ?>%; min-width:2px;">
-					</div>
-				</div>
-				<div class="quota-text">
-					S/ <?php echo number_format($monthlySpent, 2); ?> / S/ <?php echo number_format((float)$spendLimit['monthly_limit'], 2); ?>
-					&nbsp;(<?php echo $quotaPct; ?>%)
+				<!-- Left metrics: Mes income & Day expense -->
+				<div class="myfin-metrics-container hidden-xs">
+					<span class="metric-badge metric-badge-income" title="Ingresos del mes de <?php echo date('F Y'); ?>">
+						<i class="glyphicon glyphicon-arrow-up"></i> Mes: S/ <?php echo number_format($monthIncome, 2); ?>
+					</span>
+					<span class="metric-badge metric-badge-expense" title="Gastos del día de hoy (<?php echo date('d/m/Y'); ?>)">
+						<i class="glyphicon glyphicon-arrow-down"></i> Hoy: S/ <?php echo number_format($todayExpenses, 2); ?>
+					</span>
 				</div>
 			</div>
-			<?php endif; ?>
 
-			<!-- Nav links -->
+			<!-- Nav links on the right (matching user's reference image) -->
 			<div class="collapse navbar-collapse" id="financeNavbar">
-				<ul class="nav navbar-nav navbar-left">
+				<ul class="nav navbar-nav navbar-right">
 					<li id="navDashboard" <?php if($currentPage==='dashboard.php') echo 'class="active"'; ?>>
 						<a href="dashboard.php">
 							<i class="glyphicon glyphicon-home"></i> Inicio
@@ -329,44 +277,42 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 					</li>
 					<li id="navIncome" <?php if($currentPage==='income.php') echo 'class="active"'; ?>>
 						<a href="income.php">
-							<i class="glyphicon glyphicon-arrow-up" style="color:#4ade80;"></i> Ingresos
+							<i class="glyphicon glyphicon-arrow-up text-success"></i> Ingresos
 						</a>
 					</li>
 					<li id="navExpense" <?php if($currentPage==='expense.php') echo 'class="active"'; ?>>
 						<a href="expense.php">
-							<i class="glyphicon glyphicon-arrow-down" style="color:#f87171;"></i> Gastos
+							<i class="glyphicon glyphicon-arrow-down text-danger"></i> Gastos
 						</a>
 					</li>
 					<li id="navLoans" <?php if($currentPage==='loans.php') echo 'class="active"'; ?>>
 						<a href="loans.php">
-							<i class="glyphicon glyphicon-retweet" style="color:#fbbf24;"></i> Préstamos
+							<i class="glyphicon glyphicon-retweet text-warning"></i> Préstamos
 						</a>
 					</li>
 					<li id="navProjects" <?php if($currentPage==='projects.php') echo 'class="active"'; ?>>
 						<a href="projects.php">
-							<i class="glyphicon glyphicon-briefcase" style="color:#38bdf8;"></i> Proyectos
+							<i class="glyphicon glyphicon-briefcase text-primary"></i> Proyectos
 						</a>
 					</li>
 					<li id="navAssets" <?php if($currentPage==='assets.php') echo 'class="active"'; ?>>
 						<a href="assets.php">
-							<i class="glyphicon glyphicon-certificate" style="color:#c084fc;"></i> Activos
+							<i class="glyphicon glyphicon-certificate" style="color:#8e44ad;"></i> Activos
 						</a>
 					</li>
 					<li id="navReport" <?php if($currentPage==='finance_report.php') echo 'class="active"'; ?>>
 						<a href="finance_report.php">
-							<i class="glyphicon glyphicon-stats" style="color:#22d3ee;"></i> Reportes
+							<i class="glyphicon glyphicon-stats text-info"></i> Reportes
 						</a>
 					</li>
-				</ul>
-
-				<ul class="nav navbar-nav navbar-right">
+					<!-- User options dropdown (matching screenshot with icon and caret) -->
 					<li class="dropdown" id="navSetting">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">
-							<i class="glyphicon glyphicon-user" style="color:#38bdf8;"></i>
-							<?php echo htmlspecialchars($_SESSION['username'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'); ?>
-							<span class="caret"></span>
+							<i class="glyphicon glyphicon-user"></i> <span class="caret"></span>
 						</a>
 						<ul class="dropdown-menu">
+							<li class="dropdown-header">Usuario: <strong><?php echo htmlspecialchars($_SESSION['username'] ?? 'admin', ENT_QUOTES, 'UTF-8'); ?></strong></li>
+							<li role="separator" class="divider"></li>
 							<li id="topNavSetting">
 								<a href="setting.php">
 									<i class="glyphicon glyphicon-wrench"></i> Configuración
