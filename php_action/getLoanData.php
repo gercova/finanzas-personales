@@ -11,7 +11,7 @@ $stmt = $connect->prepare(
     "SELECT loan_id AS id, borrower_name, concept, account_id, loan_date, due_date,
             principal_amount, interest_type, interest_value, total_receivable,
             amount_repaid, balance_pending, status, notes
-     FROM loans WHERE loan_id=? AND created_by=?"
+     FROM loans WHERE loan_id=? AND created_by=? AND is_deleted=0"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmt->bind_param("ii", $id, $userId);

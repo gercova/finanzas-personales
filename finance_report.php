@@ -4,7 +4,7 @@
 $userId = (int)$_SESSION['userId'];
 
 // ── 1. Saldo Disponible ────────────────────────────────────────────────────
-$stmtSaldo = $connect->prepare("SELECT COALESCE(SUM(current_balance),0) AS total FROM accounts WHERE status=1");
+$stmtSaldo = $connect->prepare("SELECT COALESCE(SUM(current_balance),0) AS total FROM accounts WHERE status=1 AND is_deleted=0");
 $saldoDisponible = 0;
 if ($stmtSaldo) { $stmtSaldo->execute(); $saldoDisponible = (float)$stmtSaldo->get_result()->fetch_assoc()['total']; $stmtSaldo->close(); }
 
@@ -12,16 +12,16 @@ if ($stmtSaldo) { $stmtSaldo->execute(); $saldoDisponible = (float)$stmtSaldo->g
 $currentMonth = date('Y-m');
 $currentYear  = date('Y');
 
-$stmtGastoMes = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=? AND created_by=?");
+$stmtGastoMes = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=? AND created_by=? AND is_deleted=0");
 $gastoMes = 0;
 if ($stmtGastoMes) { $stmtGastoMes->bind_param("si",$currentMonth,$userId); $stmtGastoMes->execute(); $gastoMes=(float)$stmtGastoMes->get_result()->fetch_assoc()['total']; $stmtGastoMes->close(); }
 
-$stmtGastoAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE YEAR(expense_date)=? AND created_by=?");
+$stmtGastoAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE YEAR(expense_date)=? AND created_by=? AND is_deleted=0");
 $gastoAnio = 0;
 if ($stmtGastoAnio) { $stmtGastoAnio->bind_param("ii",$currentYear,$userId); $stmtGastoAnio->execute(); $gastoAnio=(float)$stmtGastoAnio->get_result()->fetch_assoc()['total']; $stmtGastoAnio->close(); }
 
 // ── 3. Total Préstamos Pendientes ─────────────────────────────────────────
-$stmtPrest = $connect->prepare("SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=?");
+$stmtPrest = $connect->prepare("SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0");
 $totalPrestamoPendiente = 0;
 if ($stmtPrest) { $stmtPrest->bind_param("i",$userId); $stmtPrest->execute(); $totalPrestamoPendiente=(float)$stmtPrest->get_result()->fetch_assoc()['total']; $stmtPrest->close(); }
 
@@ -29,19 +29,19 @@ if ($stmtPrest) { $stmtPrest->bind_param("i",$userId); $stmtPrest->execute(); $t
 $balanceTotal = $saldoDisponible + $totalPrestamoPendiente;
 
 // ── 5. Patrimonio Neto (Balance + Activos ACTIVO) ─────────────────────────
-$stmtActivos = $connect->prepare("SELECT COALESCE(SUM(estimated_value),0) AS total FROM assets WHERE status='ACTIVO' AND created_by=?");
+$stmtActivos = $connect->prepare("SELECT COALESCE(SUM(estimated_value),0) AS total FROM assets WHERE status='ACTIVO' AND created_by=? AND is_deleted=0");
 $totalActivos = 0;
 if ($stmtActivos) { $stmtActivos->bind_param("i",$userId); $stmtActivos->execute(); $totalActivos=(float)$stmtActivos->get_result()->fetch_assoc()['total']; $stmtActivos->close(); }
 
 $patrimonioNeto = $balanceTotal + $totalActivos;
 
 // ── 6. Total Ingresos Año ────────────────────────────────────────────────
-$stmtIngAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=?");
+$stmtIngAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=? AND is_deleted=0");
 $ingresosAnio = 0;
 if ($stmtIngAnio) { $stmtIngAnio->bind_param("ii",$currentYear,$userId); $stmtIngAnio->execute(); $ingresosAnio=(float)$stmtIngAnio->get_result()->fetch_assoc()['total']; $stmtIngAnio->close(); }
 
 // ── 7. Accounts summary ──────────────────────────────────────────────────
-$stmtAccs = $connect->prepare("SELECT account_name, account_type, current_balance, currency FROM accounts WHERE status=1 ORDER BY current_balance DESC");
+$stmtAccs = $connect->prepare("SELECT account_name, account_type, current_balance, currency FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY current_balance DESC");
 $accList = [];
 if ($stmtAccs) { $stmtAccs->execute(); $r=$stmtAccs->get_result(); while($row=$r->fetch_assoc()) $accList[]=$row; $stmtAccs->close(); }
 
@@ -50,7 +50,7 @@ $stmtMonthly = $connect->prepare("
     SELECT DATE_FORMAT(expense_date,'%Y-%m') AS mes,
            COALESCE(SUM(amount),0) AS total
     FROM expenses
-    WHERE created_by=? AND expense_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+    WHERE created_by=? AND is_deleted=0 AND expense_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
     GROUP BY mes ORDER BY mes ASC
 ");
 $monthlyExpenses = [];
@@ -61,7 +61,7 @@ $stmtTopCat = $connect->prepare("
     SELECT fc.category_name, COALESCE(SUM(e.amount),0) AS total
     FROM expenses e
     LEFT JOIN financial_categories fc ON e.category_id=fc.category_id
-    WHERE e.created_by=? AND YEAR(e.expense_date)=?
+    WHERE e.created_by=? AND YEAR(e.expense_date)=? AND e.is_deleted=0
     GROUP BY fc.category_name ORDER BY total DESC LIMIT 5
 ");
 $topCategories = [];

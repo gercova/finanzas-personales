@@ -6,7 +6,7 @@
 $currentMonth = date('Y-m');
 $currentYear  = date('Y');
 
-$stmtMes      = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE DATE_FORMAT(income_date,'%Y-%m')=? AND created_by=?" );
+$stmtMes      = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE DATE_FORMAT(income_date,'%Y-%m')=? AND created_by=? AND is_deleted=0" );
 $totalMes     = 0;
 if ($stmtMes) {
     $stmtMes->bind_param("si", $currentMonth, $_SESSION['userId']);
@@ -15,7 +15,7 @@ if ($stmtMes) {
     $stmtMes->close();
 }
 
-$stmtYear = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=?");
+$stmtYear = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=? AND is_deleted=0");
 $totalYear = 0;
 if ($stmtYear) {
     $stmtYear->bind_param("ii", $currentYear, $_SESSION['userId']);
@@ -24,7 +24,7 @@ if ($stmtYear) {
     $stmtYear->close();
 }
 
-$stmtRec = $connect->prepare("SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=?");
+$stmtRec = $connect->prepare("SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=? AND is_deleted=0");
 $totalRecurring = 0;
 if ($stmtRec) {
   $stmtRec->bind_param("i", $_SESSION['userId']);
@@ -34,7 +34,7 @@ if ($stmtRec) {
 }
 
 // Accounts for select
-$stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
+$stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY account_name");
 $accounts = [];
 if ($stmtAcc) {
   $stmtAcc->execute();
@@ -44,7 +44,7 @@ if ($stmtAcc) {
 }
 
 // Financial categories
-$stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'INCOME' AND status=1 ORDER BY category_name");
+$stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'INCOME' AND status=1 AND is_deleted=0 ORDER BY category_name");
 $finCategories = [];
 if ($stmtCat) {
   $stmtCat->execute();
@@ -54,7 +54,7 @@ if ($stmtCat) {
 }
 
 // Projects
-$stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' ORDER BY project_name");
+$stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
 $projects = [];
 if ($stmtProj) {
   $stmtProj->execute();

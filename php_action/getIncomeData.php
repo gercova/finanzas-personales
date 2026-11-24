@@ -9,7 +9,7 @@ if ($id <= 0) { echo json_encode(['success'=>false,'messages'=>'ID inválido.'])
 
 $stmt = $connect->prepare(
     "SELECT income_id AS id, concept, account_id, category_id, project_id, income_date, amount, is_recurring, status, notes
-     FROM incomes WHERE income_id=? AND created_by=?"
+     FROM incomes WHERE income_id=? AND created_by=? AND is_deleted=0"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmt->bind_param("ii", $id, $userId);

@@ -28,13 +28,12 @@ $events = [];
 
 // 1. INCOMES (Green)
 $sqlIncomes = "
-    SELECT i.income_id, i.concept, i.amount, i.income_date, i.status,
-           a.account_name, fc.category_name, p.project_name
+    SELECT i.income_id, i.concept, i.amount, i.income_date, i.status, a.account_name, fc.category_name, p.project_name
     FROM incomes i
     LEFT JOIN accounts a ON i.account_id = a.account_id
     LEFT JOIN financial_categories fc ON i.category_id = fc.category_id
     LEFT JOIN projects p ON i.project_id = p.project_id
-    WHERE i.created_by = ? " . ($useDateFilter ? "AND i.income_date BETWEEN ? AND ?" : "") . "
+    WHERE i.created_by = ? AND i.is_deleted = 0 " . ($useDateFilter ? "AND i.income_date BETWEEN ? AND ?" : "") . "
     ORDER BY i.income_date ASC
 ";
 
@@ -74,13 +73,12 @@ if ($stmtInc) {
 
 // 2. EXPENSES (Red)
 $sqlExpenses = "
-    SELECT e.expense_id, e.concept, e.amount, e.expense_date, e.status,
-           a.account_name, fc.category_name, p.project_name
+    SELECT e.expense_id, e.concept, e.amount, e.expense_date, e.status, a.account_name, fc.category_name, p.project_name
     FROM expenses e
     LEFT JOIN accounts a ON e.account_id = a.account_id
     LEFT JOIN financial_categories fc ON e.category_id = fc.category_id
     LEFT JOIN projects p ON e.project_id = p.project_id
-    WHERE e.created_by = ? " . ($useDateFilter ? "AND e.expense_date BETWEEN ? AND ?" : "") . "
+    WHERE e.created_by = ? AND e.is_deleted = 0 " . ($useDateFilter ? "AND e.expense_date BETWEEN ? AND ?" : "") . "
     ORDER BY e.expense_date ASC
 ";
 
@@ -120,12 +118,10 @@ if ($stmtExp) {
 
 // 3. LOANS (Amber / Orange)
 $sqlLoans = "
-    SELECT l.loan_id, l.borrower_name, l.concept, l.principal_amount,
-           l.balance_pending, l.loan_date, l.due_date, l.status,
-           a.account_name
+    SELECT l.loan_id, l.borrower_name, l.concept, l.principal_amount, l.balance_pending, l.loan_date, l.due_date, l.status, a.account_name
     FROM loans l
     LEFT JOIN accounts a ON l.account_id = a.account_id
-    WHERE l.created_by = ? " . ($useDateFilter ? "AND l.loan_date BETWEEN ? AND ?" : "") . "
+    WHERE l.created_by = ? AND l.is_deleted = 0 " . ($useDateFilter ? "AND l.loan_date BETWEEN ? AND ?" : "") . "
     ORDER BY l.loan_date ASC
 ";
 
@@ -139,10 +135,10 @@ if ($stmtLoans) {
     $stmtLoans->execute();
     $resLoans = $stmtLoans->get_result();
     while ($row = $resLoans->fetch_assoc()) {
-        $monto = (float)$row['principal_amount'];
-        $pendiente = (float)$row['balance_pending'];
-        $borrower = !empty($row['borrower_name']) ? $row['borrower_name'] : $row['concept'];
-        $events[] = [
+        $monto      = (float)$row['principal_amount'];
+        $pendiente  = (float)$row['balance_pending'];
+        $borrower   = !empty($row['borrower_name']) ? $row['borrower_name'] : $row['concept'];
+        $events[]   = [
             'id'              => 'loan_' . $row['loan_id'],
             'title'           => '⇄ S/ ' . number_format($monto, 2) . ' · ' . $borrower,
             'start'           => $row['loan_date'],

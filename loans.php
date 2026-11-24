@@ -3,7 +3,7 @@ require_once 'includes/header.php';
 
 // Load loans data for stat cards
 $stmtTotalPrestado = $connect->prepare(
-    "SELECT COALESCE(SUM(principal_amount),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=?"
+    "SELECT COALESCE(SUM(principal_amount),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0"
 );
 $totalPrestado = 0;
 if ($stmtTotalPrestado) {
@@ -14,7 +14,7 @@ if ($stmtTotalPrestado) {
 }
 
 $stmtTotalCobrado = $connect->prepare(
-    "SELECT COALESCE(SUM(amount_repaid),0) AS total FROM loans WHERE created_by=?"
+    "SELECT COALESCE(SUM(amount_repaid),0) AS total FROM loans WHERE created_by=? AND is_deleted=0"
 );
 $totalCobrado = 0;
 if ($stmtTotalCobrado) {
@@ -25,7 +25,7 @@ if ($stmtTotalCobrado) {
 }
 
 $stmtTotalPendiente = $connect->prepare(
-    "SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=?"
+    "SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0"
 );
 $totalPendiente = 0;
 if ($stmtTotalPendiente) {
@@ -37,7 +37,7 @@ if ($stmtTotalPendiente) {
 
 // Accounts
 $loanAccounts = [];
-$stmtLA = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 ORDER BY account_name");
+$stmtLA = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY account_name");
 if ($stmtLA) { $stmtLA->execute(); $r=$stmtLA->get_result(); while($row=$r->fetch_assoc()) $loanAccounts[]=$row; $stmtLA->close(); }
 ?>
 <?php require_once 'modal/loanModal.php'; ?>

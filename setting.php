@@ -24,7 +24,7 @@
 
 	// Fetch current month's total spent
 	$spentThisMonth = 0;
-	$stmtSp = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ?");
+	$stmtSp = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0");
 	if ($stmtSp) {
 		$stmtSp->bind_param("si", $currentMonth, $user_id);
 		$stmtSp->execute();

@@ -9,7 +9,7 @@ if ($id <= 0) { echo json_encode(['success'=>false,'messages'=>'ID inválido.'])
 
 $stmt = $connect->prepare(
     "SELECT expense_id AS id, concept, account_id, category_id, project_id, expense_date, amount, status, receipt_image, notes
-     FROM expenses WHERE expense_id=? AND created_by=?"
+     FROM expenses WHERE expense_id=? AND created_by=? AND is_deleted=0"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmt->bind_param("ii", $id, $userId);

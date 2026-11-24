@@ -6,7 +6,7 @@ $stmt = $connect->prepare("
     SELECT asset_id, asset_name, category, estimated_value, purchase_price, purchase_date,
            document_number, location_or_custody, status, image_path, notes
     FROM assets
-    WHERE created_by = ?
+    WHERE created_by = ? AND is_deleted = 0
     ORDER BY created_at DESC
 ");
 $stmt->bind_param("i", $userId);

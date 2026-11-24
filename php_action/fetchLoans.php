@@ -12,7 +12,7 @@ $stmt = $connect->prepare("
            l.account_id
     FROM loans l
     LEFT JOIN accounts a ON l.account_id = a.account_id
-    WHERE l.created_by = ?
+    WHERE l.created_by = ? AND l.is_deleted = 0
     ORDER BY l.loan_date DESC
 ");
 if (!$stmt) { echo json_encode(['data'=>[]]); exit; }
@@ -47,16 +47,30 @@ while ($row = $result->fetch_assoc()) {
 
     $dueDate = $row['due_date'] ? date('d/m/Y', strtotime($row['due_date'])) : '-';
 
+    $statusActions = '';
+    if ($status !== 'PAGADO') {
+        $statusActions .= '<li><a href="#" class="change-status-loan" data-id="'.intval($row['id']).'" data-status="PAGADO"><i class="glyphicon glyphicon-ok-sign text-success"></i> Marcar como PAGADO</a></li>';
+    }
+    if ($status !== 'PENDIENTE') {
+        $statusActions .= '<li><a href="#" class="change-status-loan" data-id="'.intval($row['id']).'" data-status="PENDIENTE"><i class="glyphicon glyphicon-time text-danger"></i> Marcar como PENDIENTE</a></li>';
+    }
+    if ($status !== 'PARCIAL' && (float)$row['balance_pending'] > 0 && (float)$row['amount_repaid'] > 0) {
+        $statusActions .= '<li><a href="#" class="change-status-loan" data-id="'.intval($row['id']).'" data-status="PARCIAL"><i class="glyphicon glyphicon-adjust text-warning"></i> Marcar como PARCIAL</a></li>';
+    }
+
     $actions = '
       <div class="btn-group">
         <button type="button" class="btn btn-xs btn-default dropdown-toggle" data-toggle="dropdown">
-          <i class="glyphicon glyphicon-cog"></i> <span class="caret"></span>
+          <i class="glyphicon glyphicon-cog"></i> Acción <span class="caret"></span>
         </button>
         <ul class="dropdown-menu dropdown-menu-right">
           <li><a href="#" class="pay-loan" data-id="'.intval($row['id']).'"
                data-borrower="'.htmlspecialchars($row['borrower_name']).'"
                data-pending="'.number_format((float)$row['balance_pending'],2).'">
                <i class="glyphicon glyphicon-usd text-success"></i> Registrar Pago</a></li>
+          <li class="divider"></li>
+          <li class="dropdown-header">Cambiar Estado</li>
+          ' . $statusActions . '
           <li class="divider"></li>
           <li><a href="#" class="edit-loan" data-id="'.intval($row['id']).'"><i class="glyphicon glyphicon-edit"></i> Editar</a></li>
           <li class="divider"></li>

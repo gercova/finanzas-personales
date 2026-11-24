@@ -3,15 +3,15 @@
 // ── Summary stats ────────────────────────────────────────────────────────────
 $userId = (int)$_SESSION['userId'];
 
-$stTotal = $connect->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(estimated_value),0) as total_val FROM assets WHERE created_by = ? AND status = 'ACTIVO'");
+$stTotal = $connect->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(estimated_value),0) as total_val FROM assets WHERE created_by = ? AND status = 'ACTIVO' AND is_deleted = 0");
 $stTotal->bind_param("i", $userId); $stTotal->execute();
 $rowTotal = $stTotal->get_result()->fetch_assoc(); $stTotal->close();
 
-$stGarantia = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ? AND status = 'EN_GARANTIA'");
+$stGarantia = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ? AND status = 'EN_GARANTIA' AND is_deleted = 0");
 $stGarantia->bind_param("i", $userId); $stGarantia->execute();
 $rowGarantia = $stGarantia->get_result()->fetch_assoc(); $stGarantia->close();
 
-$stAll = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ?");
+$stAll = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ? AND is_deleted = 0");
 $stAll->bind_param("i", $userId); $stAll->execute();
 $rowAll = $stAll->get_result()->fetch_assoc(); $stAll->close();
 ?>

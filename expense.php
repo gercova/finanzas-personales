@@ -16,7 +16,7 @@ if ($stmtSL) {
 }
 $pageMonthlySpent = 0;
 $stmtMS = $connect->prepare(
-    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ?"
+    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0"
 );
 if ($stmtMS) {
     $stmtMS->bind_param("si", $currentMonth, $_SESSION['userId']);

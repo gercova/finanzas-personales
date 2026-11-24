@@ -1,6 +1,6 @@
 <?php
 	require_once 'core.php';
-	$sql = "SELECT brand_id, brand_name, brand_active, brand_status FROM brands WHERE brand_status = 1";
+	$sql = "SELECT brand_id, brand_name, brand_active, brand_status FROM brands WHERE brand_status = 1 AND is_deleted = 0";
 	$result = $connect->query($sql);
 	$output = array('data' => array());
 	if($result->num_rows > 0){

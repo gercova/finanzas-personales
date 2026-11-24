@@ -1,6 +1,6 @@
 <?php
 	require_once 'core.php';
-	$sql = "SELECT categories_id, categories_name, categories_active, categories_status FROM categories WHERE categories_status = 1";
+	$sql = "SELECT categories_id, categories_name, categories_active, categories_status FROM categories WHERE categories_status = 1 AND is_deleted = 0";
 	$result = $connect->query($sql);
 	$output = array('data' => array());
 	if($result->num_rows > 0){

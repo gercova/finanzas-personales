@@ -65,7 +65,7 @@ $(document).ready(function () {
         processing: true,
         ajax: { url: 'php_action/fetchLoans.php', type: 'GET' },
         columns: [
-            { data: 0, width: '3%' },
+            { data: 0, width: '3%', className: 'text-center' },
             { data: 1 },
             { data: 2 },
             { data: 3 },
@@ -76,12 +76,13 @@ $(document).ready(function () {
             { data: 8 },
             { data: 9 },
             { data: 10 },
-            { data: 11 },
-            { data: 12, orderable: false }
+            { data: 11, className: 'text-center' },
+            { data: 12, orderable: false, className: 'text-center' }
         ],
         order: [[4, 'desc']],
         language: { url: 'assests/plugins/datatables/Spanish.json' },
-        responsive: true,
+        responsive: false,
+        autoWidth: false,
         createdRow: function(row, data) {
             if (data[11]) {
                 if (data[11].indexOf('PAGADO') !== -1) $(row).css('background-color','#e8d5f5');
@@ -223,10 +224,33 @@ $(document).ready(function () {
         });
     });
 
+    // CHANGE STATUS DIRECTLY
+    $(document).on('click', '.change-status-loan', function(e) {
+        e.preventDefault();
+        var id = $(this).data('id');
+        var newStatus = $(this).data('status');
+        if (!confirm('¿Desea cambiar el estado del préstamo a "' + newStatus + '"?')) return;
+        $.ajax({
+            url: 'php_action/updateLoanStatus.php',
+            type: 'POST',
+            data: { loan_id: id, status: newStatus, csrf_token: systemCsrfToken },
+            dataType: 'json',
+            success: function(res) {
+                if (res.success) {
+                    loanTable.ajax.reload(null, false);
+                    showMessage('success', res.messages);
+                } else {
+                    showMessage('danger', res.messages);
+                }
+            },
+            error: function() { showMessage('danger', 'Error de comunicación.'); }
+        });
+    });
+
     // REMOVE
     $(document).on('click', '.remove-loan', function(e) {
         e.preventDefault();
-        if (!confirm('¿Está seguro de eliminar este préstamo y todos sus pagos? Esta acción no se puede deshacer.')) return;
+        if (!confirm('¿Está seguro de eliminar este préstamo? El registro pasará a estar inactivo (borrado lógico).')) return;
         var id = $(this).data('id');
         $.ajax({
             url: 'php_action/removeLoan.php',

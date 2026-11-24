@@ -14,8 +14,9 @@ $stmt = $connect->prepare("
         COALESCE(SUM(i.amount), 0)  AS project_income,
         COALESCE(SUM(e.amount), 0)  AS project_expense
     FROM projects p
-    LEFT JOIN incomes  i ON i.project_id = p.project_id
-    LEFT JOIN expenses e ON e.project_id = p.project_id
+    LEFT JOIN incomes  i ON i.project_id = p.project_id AND i.is_deleted = 0
+    LEFT JOIN expenses e ON e.project_id = p.project_id AND e.is_deleted = 0
+    WHERE p.is_deleted = 0
     GROUP BY p.project_id
     ORDER BY p.created_at DESC
 ");

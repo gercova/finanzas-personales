@@ -11,7 +11,7 @@ $stmt = $connect->prepare("
     FROM expenses e
     LEFT JOIN accounts a ON e.account_id = a.account_id
     LEFT JOIN financial_categories fc ON e.category_id = fc.category_id
-    WHERE e.created_by = ?
+    WHERE e.created_by = ? AND e.is_deleted = 0
     ORDER BY e.expense_date DESC
 ");
 if (!$stmt) { echo json_encode(['data'=>[]]); exit; }

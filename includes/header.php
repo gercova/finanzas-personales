@@ -221,7 +221,7 @@ $todayDate    = date('Y-m-d');
 
 // 1. Ingresos del mes actual
 $monthIncome = 0.0;
-$stmtMI = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE DATE_FORMAT(income_date, '%Y-%m') = ? AND created_by = ?");
+$stmtMI = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE DATE_FORMAT(income_date, '%Y-%m') = ? AND created_by = ? AND is_deleted = 0");
 if ($stmtMI) {
     $stmtMI->bind_param("si", $currentMonth, $userId);
     $stmtMI->execute();
@@ -231,7 +231,7 @@ if ($stmtMI) {
 
 // 2. Gastos del día de hoy
 $todayExpenses = 0.0;
-$stmtTE = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE expense_date = ? AND created_by = ?");
+$stmtTE = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE expense_date = ? AND created_by = ? AND is_deleted = 0");
 if ($stmtTE) {
     $stmtTE->bind_param("si", $todayDate, $userId);
     $stmtTE->execute();

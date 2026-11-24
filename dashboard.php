@@ -8,7 +8,7 @@ $userId       = (int)$_SESSION['userId'];
 // 1. Saldo Disponible: sum of active account balances
 $saldoDisponible = 0.0;
 $stmtSaldo = $connect->prepare(
-    "SELECT COALESCE(SUM(current_balance), 0) AS total FROM accounts WHERE status = 1"
+    "SELECT COALESCE(SUM(current_balance), 0) AS total FROM accounts WHERE status = 1 AND is_deleted = 0"
 );
 if ($stmtSaldo) {
     $stmtSaldo->execute();
@@ -21,7 +21,7 @@ if ($stmtSaldo) {
 // 2. Total Gastos del Mes y Total Gastos General
 $totalGastosMes = 0.0;
 $stmtGastos = $connect->prepare(
-    "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ?"
+    "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0"
 );
 if ($stmtGastos) {
     $stmtGastos->bind_param("si", $currentMonth, $userId);
@@ -35,7 +35,7 @@ if ($stmtGastos) {
 // 3. Total Préstamos Pendientes (por cobrar)
 $totalPrestamosPendientes = 0.0;
 $stmtLoans = $connect->prepare(
-    "SELECT COALESCE(SUM(balance_pending), 0) AS total FROM loans WHERE created_by = ? AND status IN ('PENDIENTE', 'PARCIAL')"
+    "SELECT COALESCE(SUM(balance_pending), 0) AS total FROM loans WHERE created_by = ? AND status IN ('PENDIENTE', 'PARCIAL') AND is_deleted = 0"
 );
 if ($stmtLoans) {
     $stmtLoans->bind_param("i", $userId);
@@ -80,7 +80,7 @@ if ($spendLimit && (float)$spendLimit['monthly_limit'] > 0) {
 // 6. Accounts summary table
 $accounts = [];
 $stmtAccounts = $connect->prepare(
-    "SELECT account_name AS name, account_type, current_balance AS balance, currency FROM accounts WHERE status = 1 ORDER BY current_balance DESC"
+    "SELECT account_name AS name, account_type, current_balance AS balance, currency FROM accounts WHERE status = 1 AND is_deleted = 0 ORDER BY current_balance DESC"
 );
 if ($stmtAccounts) {
     $stmtAccounts->execute();
@@ -94,7 +94,7 @@ if ($stmtAccounts) {
 // 7. Recent incomes (last 5)
 $recentIncomes = [];
 $stmtInc = $connect->prepare(
-    "SELECT concept AS description, amount, income_date AS txn_date, 'ingreso' AS txn_type FROM incomes WHERE created_by = ? ORDER BY income_date DESC, income_id DESC LIMIT 5"
+    "SELECT concept AS description, amount, income_date AS txn_date, 'ingreso' AS txn_type FROM incomes WHERE created_by = ? AND is_deleted = 0 ORDER BY income_date DESC, income_id DESC LIMIT 5"
 );
 if ($stmtInc) {
     $stmtInc->bind_param("i", $userId);
@@ -109,7 +109,7 @@ if ($stmtInc) {
 // 8. Recent expenses (last 5)
 $recentExpenses = [];
 $stmtExp = $connect->prepare(
-    "SELECT concept AS description, amount, expense_date AS txn_date, 'gasto' AS txn_type FROM expenses WHERE created_by = ? ORDER BY expense_date DESC, expense_id DESC LIMIT 5"
+    "SELECT concept AS description, amount, expense_date AS txn_date, 'gasto' AS txn_type FROM expenses WHERE created_by = ? AND is_deleted = 0 ORDER BY expense_date DESC, expense_id DESC LIMIT 5"
 );
 if ($stmtExp) {
     $stmtExp->bind_param("i", $userId);

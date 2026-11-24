@@ -12,7 +12,7 @@ $stmt = $connect->prepare("
     LEFT JOIN accounts a ON i.account_id = a.account_id
     LEFT JOIN financial_categories fc ON i.category_id = fc.category_id
     LEFT JOIN projects p ON i.project_id = p.project_id
-    WHERE i.created_by = ?
+    WHERE i.created_by = ? AND i.is_deleted = 0
     ORDER BY i.income_date DESC
 ");
 if (!$stmt) { echo json_encode(['data'=>[]]); exit; }

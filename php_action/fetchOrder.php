@@ -1,6 +1,6 @@
 <?php
 	require_once 'core.php';
-	$sql = "SELECT order_id, order_date, client_name, client_contact, payment_status FROM orders WHERE order_status = 1";
+	$sql = "SELECT order_id, order_date, client_name, client_contact, payment_status FROM orders WHERE order_status = 1 AND is_deleted = 0";
 	$result = $connect->query($sql);
 	$output = array('data' => array());
 	if($result->num_rows > 0){
