@@ -50,6 +50,7 @@ function initSecureSession() {
     }
 
     // Verify session validity if user is logged in
+    $sessionLifetime = (int)env('SESSION_LIFETIME', 1800);
     if (isset($_SESSION['userId'])) {
         // Inactivity timeout check
         if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $sessionLifetime)) {
