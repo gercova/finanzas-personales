@@ -75,18 +75,16 @@ $pageQuotaPctCapped = min($pageQuotaPct, 100);
         <div id="quota-alert-container"></div>
 
         <div class="panel panel-default">
-            <div class="panel-heading">
-                <div class="page-heading">
-                    <i class="glyphicon glyphicon-arrow-down text-danger"></i> Gestión de Gastos
+            <div class="panel-heading panel-heading-flex" style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 8px 15px;">
+                <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
+                    <i class="glyphicon glyphicon-arrow-down text-danger" style="margin-right: 8px;"></i> Gestión de Gastos
                 </div>
+                <button class="btn btn-danger" data-toggle="modal" id="addExpenseModalBtn" data-target="#addExpenseModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="glyphicon glyphicon-plus-sign"></i> Registrar Gasto
+                </button>
             </div><!-- /panel-heading -->
             <div class="panel-body">
                 <div class="remove-messages"></div>
-                <div class="div-action pull pull-right" style="padding-bottom:20px;">
-                    <button class="btn btn-danger" data-toggle="modal" id="addExpenseModalBtn" data-target="#addExpenseModal">
-                        <i class="glyphicon glyphicon-plus-sign"></i> Registrar Gasto
-                    </button>
-                </div><!-- /div-action -->
                 <div class="table-responsive">
                     <table class="table table-hover" id="manageExpenseTable" style="width:100%;">
                         <thead>

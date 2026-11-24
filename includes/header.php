@@ -14,7 +14,7 @@
 	<!-- font awesome -->
 	<link rel="stylesheet" href="assests/font-awesome/css/font-awesome.min.css">
 	<!-- custom css -->
-	<link rel="stylesheet" href="custom/css/custom.css">
+	<link rel="stylesheet" href="custom/css/custom.css?v=<?php echo time(); ?>">
 	<!-- DataTables -->
 	<link rel="stylesheet" href="assests/plugins/datatables/jquery.dataTables.min.css">
 	<!-- DataTables Responsive -->
@@ -174,6 +174,67 @@
 			.navbar-default .navbar-collapse {
 				border-color: #334155;
 			}
+		}
+
+		/* ==============================================================
+		   PANEL HEADING WITH VERTICALLY CENTERED ACTION BUTTON (RIGHT)
+		   ============================================================== */
+		.panel-heading.panel-heading-flex,
+		.panel-heading-flex {
+			display: -webkit-box !important;
+			display: -webkit-flex !important;
+			display: -ms-flexbox !important;
+			display: flex !important;
+			-webkit-box-pack: justify !important;
+			-webkit-justify-content: space-between !important;
+			-ms-flex-pack: justify !important;
+			justify-content: space-between !important;
+			-webkit-box-align: center !important;
+			-webkit-align-items: center !important;
+			-ms-flex-align: center !important;
+			align-items: center !important;
+			min-height: 52px !important;
+			padding: 8px 15px !important;
+			box-sizing: border-box !important;
+		}
+		.panel-heading-flex .page-heading,
+		.panel-heading-flex .panel-title {
+			margin: 0 !important;
+			padding: 0 !important;
+			font-size: 16px !important;
+			font-weight: 600 !important;
+			line-height: 1 !important;
+			display: -webkit-box !important;
+			display: -webkit-flex !important;
+			display: -ms-flexbox !important;
+			display: flex !important;
+			-webkit-box-align: center !important;
+			-webkit-align-items: center !important;
+			-ms-flex-align: center !important;
+			align-items: center !important;
+			float: none !important;
+		}
+		.panel-heading-flex .page-heading i,
+		.panel-heading-flex .panel-title i {
+			margin-right: 8px !important;
+			font-size: 16px !important;
+			vertical-align: middle !important;
+		}
+		.panel-heading-flex .btn,
+		.panel-heading-flex button {
+			margin: 0 !important;
+			vertical-align: middle !important;
+			float: none !important;
+			display: -webkit-inline-box !important;
+			display: -webkit-inline-flex !important;
+			display: -ms-inline-flexbox !important;
+			display: inline-flex !important;
+			-webkit-box-align: center !important;
+			-webkit-align-items: center !important;
+			-ms-flex-align: center !important;
+			align-items: center !important;
+			gap: 5px !important;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.12) !important;
 		}
 	</style>
 </head>

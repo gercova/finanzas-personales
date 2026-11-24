@@ -103,19 +103,16 @@ if ($stmtProj) {
     </div><!-- /stat cards -->
 
     <div class="panel panel-default">
-      <div class="panel-heading">
-        <div class="page-heading">
-          <i class="glyphicon glyphicon-arrow-up text-success"></i> Gestión de Ingresos
-          <div class="div-action pull pull-right">
-            <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal">
-              <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
-            </button>
-          </div>
+      <div class="panel-heading panel-heading-flex" style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 8px 15px;">
+        <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
+          <i class="glyphicon glyphicon-arrow-up text-success" style="margin-right: 8px;"></i> Gestión de Ingresos
         </div>
+        <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+          <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
+        </button>
       </div>
       <div class="panel-body">
         <div class="remove-messages"></div>
-        
         <div class="table-responsive">
           <table class="table table-hover" id="manageIncomeTable" style="width:100%;">
             <thead>

@@ -15,6 +15,33 @@ nav.navbar:hover {
   display: inline-block;
 }
 
+/* Panel heading with vertically centered action buttons */
+.panel-heading-flex {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  min-height: 52px;
+  padding: 8px 15px !important;
+}
+.panel-heading-flex .page-heading,
+.panel-heading-flex .panel-title {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  display: flex;
+  align-items: center;
+}
+.panel-heading-flex .page-heading i,
+.panel-heading-flex .panel-title i {
+  margin-right: 6px;
+}
+.panel-heading-flex .btn {
+  margin: 0 !important;
+  vertical-align: middle;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+
 /* Button hover effects */
 button.button1,
 .btn {

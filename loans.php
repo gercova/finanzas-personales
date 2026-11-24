@@ -88,18 +88,16 @@ if ($stmtLA) { $stmtLA->execute(); $r=$stmtLA->get_result(); while($row=$r->fetc
     </div>
 
     <div class="panel panel-default">
-      <div class="panel-heading">
-        <div class="page-heading">
-          <i class="glyphicon glyphicon-share-alt text-danger"></i> Gestión de Préstamos
+      <div class="panel-heading panel-heading-flex" style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 8px 15px;">
+        <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
+          <i class="glyphicon glyphicon-share-alt text-danger" style="margin-right: 8px;"></i> Gestión de Préstamos
         </div>
+        <button class="btn btn-danger" data-toggle="modal" data-target="#addLoanModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+          <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo
+        </button>
       </div>
       <div class="panel-body">
         <div class="remove-messages"></div>
-        <div class="div-action pull pull-right" style="padding-bottom:20px;">
-          <button class="btn btn-danger" data-toggle="modal" data-target="#addLoanModal">
-            <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo
-          </button>
-        </div>
         <div class="table-responsive">
           <table class="table table-hover" id="manageLoanTable" style="width:100%;">
             <thead>

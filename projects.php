@@ -14,14 +14,13 @@
 <div class="row">
     <div class="col-xs-12">
         <div class="panel panel-default">
-            <div class="panel-heading">
-                <h3 class="panel-title"><i class="glyphicon glyphicon-briefcase"></i> Gestión de Proyectos</h3>
-                <div class="pull-right" style="margin-top:-5px;">
-                    <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addProjectModal">
-                        <i class="glyphicon glyphicon-plus"></i> Nuevo Proyecto
-                    </button>
+            <div class="panel-heading panel-heading-flex" style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; padding: 8px 15px;">
+                <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
+                    <i class="glyphicon glyphicon-briefcase text-primary" style="margin-right: 8px;"></i> Gestión de Proyectos
                 </div>
-                <div class="clearfix"></div>
+                <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#addProjectModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="glyphicon glyphicon-plus-sign"></i> Nuevo Proyecto
+                </button>
             </div>
             <div class="panel-body table-responsive">
                 <table id="projectsTable" class="table table-striped table-hover" style="width:100%">
