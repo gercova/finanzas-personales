@@ -12,8 +12,8 @@
 
 		$orderId = isset($_POST['orderId']) ? (int)$_POST['orderId'] : 0;
 		if($orderId > 0){ 
-			$sql = "UPDATE orders SET order_status = 2 WHERE order_id = ?";
-			$orderItem = "UPDATE order_item SET order_item_status = 2 WHERE order_id = ?";
+			$sql = "UPDATE orders SET order_status = 2, is_deleted = 1, deleted_at = NOW() WHERE order_id = ?";
+			$orderItem = "UPDATE order_item SET order_item_status = 2, is_deleted = 1, deleted_at = NOW() WHERE order_id = ?";
 			
 			$stmt1 = $connect->prepare($sql);
 			$stmt2 = $connect->prepare($orderItem);

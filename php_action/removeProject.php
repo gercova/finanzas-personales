@@ -15,12 +15,12 @@ if ($id < 1) {
     echo json_encode($valid); exit();
 }
 
-$stmt = $connect->prepare("DELETE FROM projects WHERE project_id = ?");
+$stmt = $connect->prepare("UPDATE projects SET is_deleted = 1, deleted_at = NOW() WHERE project_id = ?");
 if ($stmt) {
     $stmt->bind_param("i", $id);
     if ($stmt->execute()) {
         $valid['success']  = true;
-        $valid['messages'] = 'Proyecto eliminado exitosamente.';
+        $valid['messages'] = 'Proyecto eliminado exitosamente (borrado lógico).';
     } else {
         $valid['messages'] = 'Error al eliminar el proyecto.';
     }

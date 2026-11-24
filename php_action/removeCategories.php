@@ -12,7 +12,7 @@
 
 		$categoriesId = isset($_POST['categoriesId']) ? (int)$_POST['categoriesId'] : 0;
 		if($categoriesId > 0){ 
-			$sql = "UPDATE categories SET categories_status = 2 WHERE categories_id = ?";
+			$sql = "UPDATE categories SET categories_status = 2, is_deleted = 1, deleted_at = NOW() WHERE categories_id = ?";
 			$stmt = $connect->prepare($sql);
 			if($stmt){
 				$stmt->bind_param("i", $categoriesId);

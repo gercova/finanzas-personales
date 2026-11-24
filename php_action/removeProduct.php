@@ -12,7 +12,7 @@
 
 		$productId = isset($_POST['productId']) ? (int)$_POST['productId'] : 0;
 		if($productId > 0){
-			$sql = "UPDATE product SET active = 2, status = 2 WHERE product_id = ?";
+			$sql = "UPDATE product SET active = 2, status = 2, is_deleted = 1, deleted_at = NOW() WHERE product_id = ?";
 			$stmt = $connect->prepare($sql);
 			if($stmt){
 				$stmt->bind_param("i", $productId);

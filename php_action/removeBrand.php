@@ -12,7 +12,7 @@
 
 		$brandId = isset($_POST['brandId']) ? (int)$_POST['brandId'] : 0;
 		if($brandId > 0){ 
-			$sql = "UPDATE brands SET brand_status = 2 WHERE brand_id = ?";
+			$sql = "UPDATE brands SET brand_status = 2, is_deleted = 1, deleted_at = NOW() WHERE brand_id = ?";
 			$stmt = $connect->prepare($sql);
 			if($stmt){
 				$stmt->bind_param("i", $brandId);

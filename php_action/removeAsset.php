@@ -29,16 +29,12 @@ if (!$row) {
     echo json_encode($valid); exit();
 }
 
-$stmt = $connect->prepare("DELETE FROM assets WHERE asset_id = ? AND created_by = ?");
+$stmt = $connect->prepare("UPDATE assets SET is_deleted = 1, deleted_at = NOW(), status = 'DADO_DE_BAJA' WHERE asset_id = ? AND created_by = ?");
 if ($stmt) {
     $stmt->bind_param("ii", $assetId, $userId);
     if ($stmt->execute()) {
-        // Remove image file
-        if (!empty($row['image_path']) && file_exists('../' . $row['image_path'])) {
-            @unlink('../' . $row['image_path']);
-        }
         $valid['success']  = true;
-        $valid['messages'] = 'Activo eliminado exitosamente.';
+        $valid['messages'] = 'Activo eliminado exitosamente (borrado lógico).';
     } else {
         $valid['messages'] = 'Error al eliminar el activo.';
     }
