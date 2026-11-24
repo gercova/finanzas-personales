@@ -169,6 +169,47 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 	/* Transaction row colors */
 	.txn-ingreso { background-color: #f0fff4; }
 	.txn-gasto   { background-color: #fff5f5; }
+
+	/* FullCalendar event styling */
+	.fc-event {
+		cursor: pointer;
+		font-size: 11px;
+		line-height: 1.3;
+		padding: 2px 4px;
+		margin-bottom: 2px;
+		border-radius: 3px;
+		font-weight: 600;
+		box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+		border: none !important;
+	}
+	.fc-event:hover {
+		opacity: 0.92;
+		filter: brightness(1.05);
+	}
+	.fc-day-number {
+		font-weight: 700;
+		color: #555;
+	}
+	.fc-today {
+		background-color: #fcf8e3 !important;
+	}
+	.calendar-legend {
+		margin-top: 10px;
+		padding-top: 10px;
+		border-top: 1px solid #eee;
+		display: flex;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	.calendar-legend .label {
+		font-size: 11px;
+		padding: 4px 8px;
+		font-weight: 600;
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+	}
 </style>
 
 <!-- fullCalendar -->
@@ -311,15 +352,67 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 	<div class="col-xs-12 col-md-6">
 		<div class="panel panel-default">
 			<div class="panel-heading">
-				<i class="glyphicon glyphicon-calendar"></i> <strong>Calendario</strong>
+				<i class="glyphicon glyphicon-calendar"></i> <strong>Calendario de Movimientos</strong>
 			</div>
 			<div class="panel-body">
 				<div id="calendar"></div>
+				<!-- Legend -->
+				<div class="calendar-legend">
+					<span class="label" style="background-color: #27ae60; color: #fff;"><i class="glyphicon glyphicon-arrow-up"></i> Ingresos</span>
+					<span class="label" style="background-color: #d9534f; color: #fff;"><i class="glyphicon glyphicon-arrow-down"></i> Gastos</span>
+					<span class="label" style="background-color: #f0ad4e; color: #fff;"><i class="glyphicon glyphicon-transfer"></i> Préstamos</span>
+				</div>
 			</div>
 		</div>
 	</div><!-- /.col calendar -->
 
 </div><!-- /.row main -->
+
+<!-- Modal Detalle de Evento del Calendario -->
+<div class="modal fade" id="calendarEventModal" tabindex="-1" role="dialog" aria-labelledby="calModalTitle">
+	<div class="modal-dialog modal-sm" role="document">
+		<div class="modal-content">
+			<div class="modal-header" id="calModalHeader" style="border-top-left-radius: 4px; border-top-right-radius: 4px; padding: 12px 15px;">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Cerrar"><span aria-hidden="true" style="color:#fff; opacity:0.8;">&times;</span></button>
+				<h4 class="modal-title" id="calModalTitle" style="color: #fff; font-weight: 600; font-size: 16px;">
+					<i id="calModalIcon" class="glyphicon"></i> <span id="calModalType">Detalle</span>
+				</h4>
+			</div>
+			<div class="modal-body" style="font-size: 13px; padding: 15px;">
+				<div class="text-center" style="margin-bottom: 12px;">
+					<div id="calModalAmount" style="font-size: 24px; font-weight: 700; letter-spacing: -0.5px;"></div>
+					<div id="calModalStatus" style="margin-top: 5px;"></div>
+				</div>
+				<table class="table table-condensed" style="margin-bottom: 0;">
+					<tbody>
+						<tr>
+							<th style="width: 38%; color: #666; border-top: none;">Concepto:</th>
+							<td id="calModalConcept" style="font-weight: 600; border-top: none;"></td>
+						</tr>
+						<tr>
+							<th style="color: #666;">Fecha:</th>
+							<td id="calModalDate"></td>
+						</tr>
+						<tr id="calModalAccountRow">
+							<th style="color: #666;">Cuenta:</th>
+							<td id="calModalAccount"></td>
+						</tr>
+						<tr id="calModalExtraRow">
+							<th id="calModalExtraLabel" style="color: #666;">Detalle:</th>
+							<td id="calModalExtraValue"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+			<div class="modal-footer" style="padding: 10px 15px;">
+				<a id="calModalActionBtn" href="#" class="btn btn-sm btn-primary">
+					<i class="glyphicon glyphicon-share-alt"></i> Ver en módulo
+				</a>
+				<button type="button" class="btn btn-sm btn-default" data-dismiss="modal">Cerrar</button>
+			</div>
+		</div>
+	</div>
+</div>
 
 <!-- fullCalendar scripts -->
 <script src="assests/plugins/moment/moment.min.js"></script>
@@ -329,7 +422,7 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 		// Activate dashboard nav item
 		$('#navDashboard').addClass('active');
 
-		// Initialize FullCalendar (compact)
+		// Initialize FullCalendar with live financial events
 		$('#calendar').fullCalendar({
 			monthNames: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'],
 			dayNamesShort: ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'],
@@ -342,7 +435,59 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 				today: 'Hoy',
 				month: 'Mes'
 			},
-			contentHeight: 380,
+			contentHeight: 460,
+			eventLimit: 3,
+			eventLimitText: 'más',
+			events: 'php_action/fetchCalendarEvents.php',
+			eventRender: function(event, element) {
+				// Tooltip with complete transaction info
+				var prefix = (event.type === 'ingreso' ? 'Ingreso: +' : (event.type === 'gasto' ? 'Gasto: -' : 'Préstamo: '));
+				var tip = prefix + 'S/ ' + event.amount + ' - ' + event.concept;
+				if (event.account && event.account !== 'No especificada') tip += ' [' + event.account + ']';
+				if (event.borrower) tip += ' (Prestatario: ' + event.borrower + ')';
+
+				element.attr('title', tip);
+			},
+			eventClick: function(event, jsEvent, view) {
+				// Populate and show the details modal
+				var headerBg = event.backgroundColor || '#337ab7';
+				$('#calModalHeader').css('background-color', headerBg);
+				$('#calModalType').text(event.typeLabel || 'Detalle');
+				$('#calModalAmount')
+					.text((event.type === 'ingreso' ? '+' : (event.type === 'gasto' ? '-' : '⇄ ')) + 'S/ ' + event.amount)
+					.css('color', headerBg);
+
+				var iconClass = 'glyphicon-usd';
+				if (event.type === 'ingreso') iconClass = 'glyphicon-arrow-up';
+				else if (event.type === 'gasto') iconClass = 'glyphicon-arrow-down';
+				else if (event.type === 'prestamo') iconClass = 'glyphicon-transfer';
+				$('#calModalIcon').attr('class', 'glyphicon ' + iconClass);
+
+				var statusBadge = '<span class="label ' + (event.badgeClass || 'label-default') + '">' + (event.status || 'REGISTRADO') + '</span>';
+				if (event.type === 'prestamo' && event.balancePending) {
+					statusBadge += ' <span class="label label-danger">Pendiente: S/ ' + event.balancePending + '</span>';
+				}
+				$('#calModalStatus').html(statusBadge);
+
+				$('#calModalConcept').text(event.concept || '-');
+				$('#calModalDate').text(event.start ? event.start.format('YYYY-MM-DD') : '-');
+				$('#calModalAccount').text(event.account || 'No especificada');
+
+				if (event.type === 'prestamo') {
+					$('#calModalExtraLabel').text('Prestatario:');
+					$('#calModalExtraValue').text(event.borrower || '-');
+					$('#calModalExtraRow').show();
+				} else if (event.category && event.category !== 'Sin categoría') {
+					$('#calModalExtraLabel').text('Categoría:');
+					$('#calModalExtraValue').text(event.category + (event.project ? ' (' + event.project + ')' : ''));
+					$('#calModalExtraRow').show();
+				} else {
+					$('#calModalExtraRow').hide();
+				}
+
+				$('#calModalActionBtn').attr('href', event.urlView || '#');
+				$('#calendarEventModal').modal('show');
+			},
 			windowResize: function() {
 				$('#calendar').fullCalendar('render');
 			}
