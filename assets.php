@@ -1,19 +1,26 @@
 <?php require_once 'includes/header.php'; ?>
 <?php
-// ── Summary stats ────────────────────────────────────────────────────────────
-$userId = (int)$_SESSION['userId'];
+// ── Summary stats via optimized View v_user_financial_summary (1 query instead of 3) ──
+$userId      = (int)$_SESSION['userId'];
+$rowTotal    = ['cnt' => 0, 'total_val' => 0];
+$rowGarantia = ['cnt' => 0];
+$rowAll      = ['cnt' => 0];
 
-$stTotal = $connect->prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(estimated_value),0) as total_val FROM assets WHERE created_by = ? AND status = 'ACTIVO' AND is_deleted = 0");
-$stTotal->bind_param("i", $userId); $stTotal->execute();
-$rowTotal = $stTotal->get_result()->fetch_assoc(); $stTotal->close();
-
-$stGarantia = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ? AND status = 'EN_GARANTIA' AND is_deleted = 0");
-$stGarantia->bind_param("i", $userId); $stGarantia->execute();
-$rowGarantia = $stGarantia->get_result()->fetch_assoc(); $stGarantia->close();
-
-$stAll = $connect->prepare("SELECT COUNT(*) as cnt FROM assets WHERE created_by = ? AND is_deleted = 0");
-$stAll->bind_param("i", $userId); $stAll->execute();
-$rowAll = $stAll->get_result()->fetch_assoc(); $stAll->close();
+$stSum = $connect->prepare("
+    SELECT activos_activos_cnt, activos_valor, activos_garantia_cnt, activos_total_cnt
+    FROM v_user_financial_summary
+    WHERE user_id = ?
+");
+if ($stSum) {
+    $stSum->bind_param("i", $userId);
+    $stSum->execute();
+    if ($r = $stSum->get_result()->fetch_assoc()) {
+        $rowTotal    = ['cnt' => (int)$r['activos_activos_cnt'], 'total_val' => (float)$r['activos_valor']];
+        $rowGarantia = ['cnt' => (int)$r['activos_garantia_cnt']];
+        $rowAll      = ['cnt' => (int)$r['activos_total_cnt']];
+    }
+    $stSum->close();
+}
 ?>
 
 <!-- Page header -->

@@ -51,13 +51,16 @@ function initSecureSession() {
 
     // Verify session validity if user is logged in
     $sessionLifetime = (int)env('SESSION_LIFETIME', 1800);
+    $isActionDir = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/php_action/') !== false);
+    $loginUrl    = $isActionDir ? '../index.php' : 'index.php';
+
     if (isset($_SESSION['userId'])) {
         // Inactivity timeout check
         if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $sessionLifetime)) {
             session_unset();
             session_destroy();
             if (!headers_sent()) {
-                header('location: index.php?error=timeout');
+                header('location: ' . $loginUrl . '?error=timeout');
                 exit();
             }
         }
@@ -69,7 +72,7 @@ function initSecureSession() {
             session_unset();
             session_destroy();
             if (!headers_sent()) {
-                header('location: index.php?error=hijack');
+                header('location: ' . $loginUrl . '?error=hijack');
                 exit();
             }
         }
@@ -213,18 +216,18 @@ function checkRateLimit($connect, $username, $explicitIp = null) {
 
     $cutoff = date('Y-m-d H:i:s', time() - $lockoutTime);
 
-    // Count failed attempts for this IP or username within lockout window
-    $sql = "SELECT COUNT(*) as failed_count, MAX(attempted_at) as last_attempt 
-            FROM login_attempts 
-            WHERE (ip_address = ? OR username = ?) 
-              AND success = 0 
+    // Count failed attempts per account (isolated so one user doesn't lock out another on shared IPs)
+    $sql = "SELECT COUNT(*) as failed_count, MAX(attempted_at) as last_attempt
+            FROM login_attempts
+            WHERE username = ?
+              AND success = 0
               AND attempted_at >= ?";
     $stmt = $connect->prepare($sql);
     if (!$stmt) {
         return ['allowed' => true, 'remaining_seconds' => 0, 'attempts' => 0];
     }
 
-    $stmt->bind_param("sss", $ipAddress, $username, $cutoff);
+    $stmt->bind_param("ss", $username, $cutoff);
     $stmt->execute();
     $result = $stmt->get_result();
     $data = $result->fetch_assoc();
@@ -240,6 +243,29 @@ function checkRateLimit($connect, $username, $explicitIp = null) {
             'remaining_seconds' => $remaining,
             'attempts' => $failedCount
         ];
+    }
+
+    // Secondary broad IP flood guard (4x threshold so shared-IP / multi-user logins aren't disrupted)
+    $ipLimit = $maxAttempts * 4;
+    $sqlIp = "SELECT COUNT(*) as ip_failed, MAX(attempted_at) as last_ip_attempt
+              FROM login_attempts
+              WHERE ip_address = ?
+                AND success = 0
+                AND attempted_at >= ?";
+    $stmtIp = $connect->prepare($sqlIp);
+    if ($stmtIp) {
+        $stmtIp->bind_param("ss", $ipAddress, $cutoff);
+        $stmtIp->execute();
+        $ipData = $stmtIp->get_result()->fetch_assoc();
+        $stmtIp->close();
+        if ((int)$ipData['ip_failed'] >= $ipLimit) {
+            $elapsed = time() - strtotime($ipData['last_ip_attempt']);
+            return [
+                'allowed' => false,
+                'remaining_seconds' => max(0, $lockoutTime - $elapsed),
+                'attempts' => (int)$ipData['ip_failed']
+            ];
+        }
     }
 
     return [

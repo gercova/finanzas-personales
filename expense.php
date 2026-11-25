@@ -2,24 +2,27 @@
 <?php require_once 'modal/expenseModal.php'; ?>
 
 <?php
-// ── Spending Quota Alert ─────────────────────────────────────────────────────
+// ── Spending Quota Alert (Per-User & SARGable) ────────────────────────────────
+$userId       = (int)$_SESSION['userId'];
 $currentMonth = date('Y-m');
+list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
+
 $pageSpendLimit = null;
 $stmtSL = $connect->prepare(
-    "SELECT monthly_limit, warning_threshold, critical_threshold FROM spending_limits WHERE month_year = ?"
+    "SELECT monthly_limit, warning_threshold, critical_threshold FROM spending_limits WHERE created_by = ? AND month_year = ?"
 );
 if ($stmtSL) {
-    $stmtSL->bind_param("s", $currentMonth);
+    $stmtSL->bind_param("is", $userId, $currentMonth);
     $stmtSL->execute();
     $pageSpendLimit = $stmtSL->get_result()->fetch_assoc();
     $stmtSL->close();
 }
 $pageMonthlySpent = 0;
 $stmtMS = $connect->prepare(
-    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0"
+    "SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE created_by = ? AND is_deleted = 0 AND expense_date >= ? AND expense_date < ?"
 );
 if ($stmtMS) {
-    $stmtMS->bind_param("si", $currentMonth, $_SESSION['userId']);
+    $stmtMS->bind_param("iss", $userId, $monthStart, $monthEnd);
     $stmtMS->execute();
     $rowMS = $stmtMS->get_result()->fetch_assoc();
     $pageMonthlySpent = (float)$rowMS['total'];

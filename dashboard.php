@@ -1,69 +1,51 @@
 <?php require_once 'includes/header.php'; ?>
 
 <?php
-// ── Dashboard data queries ───────────────────────────────────────────────────
+// ── Dashboard data via optimized multi-result Stored Procedure (1 DB round-trip) ──
 $currentMonth = date('Y-m');
 $userId       = (int)$_SESSION['userId'];
+list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
 
-// 1. Saldo Disponible: sum of active account balances
-$saldoDisponible = 0.0;
-$stmtSaldo = $connect->prepare(
-    "SELECT COALESCE(SUM(current_balance), 0) AS total FROM accounts WHERE status = 1 AND is_deleted = 0"
-);
-if ($stmtSaldo) {
-    $stmtSaldo->execute();
-    $rSaldo          = $stmtSaldo->get_result();
-    $rowSaldo        = $rSaldo->fetch_assoc();
-    $saldoDisponible = (float)$rowSaldo['total'];
-    $stmtSaldo->close();
-}
-
-// 2. Total Gastos del Mes y Total Gastos General
-$totalGastosMes = 0.0;
-$stmtGastos = $connect->prepare(
-    "SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0"
-);
-if ($stmtGastos) {
-    $stmtGastos->bind_param("si", $currentMonth, $userId);
-    $stmtGastos->execute();
-    $rGastos        = $stmtGastos->get_result();
-    $rowGastos      = $rGastos->fetch_assoc();
-    $totalGastosMes = (float)$rowGastos['total'];
-    $stmtGastos->close();
-}
-
-// 3. Total Préstamos Pendientes (por cobrar)
+$saldoDisponible          = 0.0;
+$totalGastosMes           = 0.0;
 $totalPrestamosPendientes = 0.0;
-$stmtLoans = $connect->prepare(
-    "SELECT COALESCE(SUM(balance_pending), 0) AS total FROM loans WHERE created_by = ? AND status IN ('PENDIENTE', 'PARCIAL') AND is_deleted = 0"
+$balanceTotal             = 0.0;
+$spendLimit               = null;
+$accounts                 = [];
+$recentTxns               = [];
+
+$dashSets = callProcedureMulti(
+    $connect,
+    "CALL sp_get_dashboard_data(?, ?, ?, ?)",
+    "isss",
+    [$userId, $currentMonth, $monthStart, $monthEnd]
 );
-if ($stmtLoans) {
-    $stmtLoans->bind_param("i", $userId);
-    $stmtLoans->execute();
-    $rLoans                   = $stmtLoans->get_result();
-    $rowLoans                 = $rLoans->fetch_assoc();
-    $totalPrestamosPendientes = (float)$rowLoans['total'];
-    $stmtLoans->close();
+
+if (!empty($dashSets[0][0])) {
+    $kpi = $dashSets[0][0];
+    $saldoDisponible          = (float)$kpi['saldo_disponible'];
+    $totalGastosMes           = (float)$kpi['total_gastos_mes'];
+    $totalPrestamosPendientes = (float)$kpi['prestamos_pendientes'];
+    $balanceTotal             = (float)$kpi['balance_total'];
+    if ($kpi['monthly_limit'] !== null) {
+        $spendLimit = [
+            'monthly_limit'      => $kpi['monthly_limit'],
+            'warning_threshold'  => $kpi['warning_threshold'],
+            'critical_threshold' => $kpi['critical_threshold'],
+        ];
+    }
+}
+if (!empty($dashSets[1])) {
+    $accounts = $dashSets[1];
+}
+if (!empty($dashSets[2])) {
+    $recentTxns = $dashSets[2];
 }
 
-// 4. Balance Total = Saldo Disponible + Préstamos Pendientes (ver Imagen 4: Saldo 9,420.65 + Préstamo 3,713.00 = 13,133.65)
-$balanceTotal = $saldoDisponible + $totalPrestamosPendientes;
-
-// 5. Quota check for alert banner
-$spendLimit  = null;
-$stmtLimit = $connect->prepare(
-    "SELECT monthly_limit, warning_threshold, critical_threshold FROM spending_limits WHERE month_year = ?"
-);
-if ($stmtLimit) {
-    $stmtLimit->bind_param("s", $currentMonth);
-    $stmtLimit->execute();
-    $rLimit    = $stmtLimit->get_result();
-    $spendLimit = $rLimit->fetch_assoc();
-    $stmtLimit->close();
-}
-$quotaPct       = 0;
+// Quota check for alert banner
+$quotaPct        = 0;
 $quotaAlertClass = '';
-$showAlert      = false;
+$showAlert       = false;
 if ($spendLimit && (float)$spendLimit['monthly_limit'] > 0) {
     $quotaPct = round(($totalGastosMes / (float)$spendLimit['monthly_limit']) * 100, 1);
     $warn     = isset($spendLimit['warning_threshold'])  ? (float)$spendLimit['warning_threshold']  : 75;
@@ -76,57 +58,6 @@ if ($spendLimit && (float)$spendLimit['monthly_limit'] > 0) {
         $showAlert       = true;
     }
 }
-
-// 6. Accounts summary table
-$accounts = [];
-$stmtAccounts = $connect->prepare(
-    "SELECT account_name AS name, account_type, current_balance AS balance, currency FROM accounts WHERE status = 1 AND is_deleted = 0 ORDER BY current_balance DESC"
-);
-if ($stmtAccounts) {
-    $stmtAccounts->execute();
-    $rAccounts = $stmtAccounts->get_result();
-    while ($row = $rAccounts->fetch_assoc()) {
-        $accounts[] = $row;
-    }
-    $stmtAccounts->close();
-}
-
-// 7. Recent incomes (last 5)
-$recentIncomes = [];
-$stmtInc = $connect->prepare(
-    "SELECT concept AS description, amount, income_date AS txn_date, 'ingreso' AS txn_type FROM incomes WHERE created_by = ? AND is_deleted = 0 ORDER BY income_date DESC, income_id DESC LIMIT 5"
-);
-if ($stmtInc) {
-    $stmtInc->bind_param("i", $userId);
-    $stmtInc->execute();
-    $rInc = $stmtInc->get_result();
-    while ($row = $rInc->fetch_assoc()) {
-        $recentIncomes[] = $row;
-    }
-    $stmtInc->close();
-}
-
-// 8. Recent expenses (last 5)
-$recentExpenses = [];
-$stmtExp = $connect->prepare(
-    "SELECT concept AS description, amount, expense_date AS txn_date, 'gasto' AS txn_type FROM expenses WHERE created_by = ? AND is_deleted = 0 ORDER BY expense_date DESC, expense_id DESC LIMIT 5"
-);
-if ($stmtExp) {
-    $stmtExp->bind_param("i", $userId);
-    $stmtExp->execute();
-    $rExp = $stmtExp->get_result();
-    while ($row = $rExp->fetch_assoc()) {
-        $recentExpenses[] = $row;
-    }
-    $stmtExp->close();
-}
-
-// Merge and sort by date desc (keep up to 10 combined)
-$recentTxns = array_merge($recentIncomes, $recentExpenses);
-usort($recentTxns, function ($a, $b) {
-    return strcmp($b['txn_date'], $a['txn_date']);
-});
-$recentTxns = array_slice($recentTxns, 0, 10);
 ?>
 
 <style type="text/css">
@@ -273,8 +204,9 @@ $recentTxns = array_slice($recentTxns, 0, 10);
 
 		<!-- Resumen de cuentas -->
 		<div class="panel panel-default">
-			<div class="panel-heading">
-				<i class="glyphicon glyphicon-list-alt"></i> <strong>Resumen de Cuentas</strong>
+			<div class="panel-heading panel-heading-flex" style="display: flex; justify-content: space-between; align-items: center; min-height: 44px; padding: 6px 15px;">
+				<div><i class="glyphicon glyphicon-list-alt"></i> <strong>Resumen de Cuentas</strong></div>
+				<a href="accounts.php" class="btn btn-xs btn-default"><i class="glyphicon glyphicon-cog"></i> Gestionar</a>
 			</div>
 			<div class="panel-body" style="padding:0;">
 				<?php if (empty($accounts)): ?>

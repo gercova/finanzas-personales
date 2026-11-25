@@ -11,22 +11,23 @@
 		$stmt->close();
 	}
 
-	// Fetch current month's spending limit
+	// Fetch current month's spending limit (strictly per-user)
 	$currentMonth = date('Y-m');
+	list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
 	$currentLimit = null;
-	$stmtLim = $connect->prepare("SELECT * FROM spending_limits WHERE month_year = ?");
+	$stmtLim = $connect->prepare("SELECT * FROM spending_limits WHERE created_by = ? AND month_year = ?");
 	if ($stmtLim) {
-		$stmtLim->bind_param("s", $currentMonth);
+		$stmtLim->bind_param("is", $user_id, $currentMonth);
 		$stmtLim->execute();
 		$currentLimit = $stmtLim->get_result()->fetch_assoc();
 		$stmtLim->close();
 	}
 
-	// Fetch current month's total spent
+	// Fetch current month's total spent (SARGable date range)
 	$spentThisMonth = 0;
-	$stmtSp = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m') = ? AND created_by = ? AND is_deleted = 0");
+	$stmtSp = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE created_by = ? AND is_deleted = 0 AND expense_date >= ? AND expense_date < ?");
 	if ($stmtSp) {
-		$stmtSp->bind_param("si", $currentMonth, $user_id);
+		$stmtSp->bind_param("iss", $user_id, $monthStart, $monthEnd);
 		$stmtSp->execute();
 		$spentThisMonth = (float)$stmtSp->get_result()->fetch_assoc()['total'];
 		$stmtSp->close();

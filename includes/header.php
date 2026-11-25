@@ -218,25 +218,15 @@
 $userId       = (int)$_SESSION['userId'];
 $currentMonth = date('Y-m');
 $todayDate    = date('Y-m-d');
+list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
 
-// 1. Ingresos del mes actual
-$monthIncome = 0.0;
-$stmtMI = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE DATE_FORMAT(income_date, '%Y-%m') = ? AND created_by = ? AND is_deleted = 0");
-if ($stmtMI) {
-    $stmtMI->bind_param("si", $currentMonth, $userId);
-    $stmtMI->execute();
-    $monthIncome = (float)$stmtMI->get_result()->fetch_assoc()['total'];
-    $stmtMI->close();
-}
-
-// 2. Gastos del día de hoy
+// Fetch Header Metrics (month_income & today_expenses) in a single Stored Procedure call
+$monthIncome   = 0.0;
 $todayExpenses = 0.0;
-$stmtTE = $connect->prepare("SELECT COALESCE(SUM(amount), 0) AS total FROM expenses WHERE expense_date = ? AND created_by = ? AND is_deleted = 0");
-if ($stmtTE) {
-    $stmtTE->bind_param("si", $todayDate, $userId);
-    $stmtTE->execute();
-    $todayExpenses = (float)$stmtTE->get_result()->fetch_assoc()['total'];
-    $stmtTE->close();
+$hmSets = callProcedureMulti($connect, "CALL sp_get_header_metrics(?, ?, ?, ?)", "isss", [$userId, $monthStart, $monthEnd, $todayDate]);
+if (!empty($hmSets[0][0])) {
+    $monthIncome   = (float)$hmSets[0][0]['month_income'];
+    $todayExpenses = (float)$hmSets[0][0]['today_expenses'];
 }
 
 // Determine current page for active-state
@@ -313,7 +303,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 						<ul class="dropdown-menu">
 							<li class="dropdown-header">Usuario: <strong><?php echo htmlspecialchars($_SESSION['username'] ?? 'admin', ENT_QUOTES, 'UTF-8'); ?></strong></li>
 							<li role="separator" class="divider"></li>
-							<li id="topNavSetting">
+							<li id="topNavAccounts" <?php if($currentPage==='accounts.php') echo 'class="active"'; ?>>
+								<a href="accounts.php">
+									<i class="glyphicon glyphicon-credit-card"></i> Cuentas y Categorías
+								</a>
+							</li>
+							<li id="topNavSetting" <?php if($currentPage==='setting.php') echo 'class="active"'; ?>>
 								<a href="setting.php">
 									<i class="glyphicon glyphicon-wrench"></i> Configuración
 								</a>

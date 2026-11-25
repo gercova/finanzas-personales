@@ -1,44 +1,32 @@
 <?php
 require_once 'includes/header.php';
 
-// Load loans data for stat cards
-$stmtTotalPrestado = $connect->prepare(
-    "SELECT COALESCE(SUM(principal_amount),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0"
+$userId = (int)$_SESSION['userId'];
+
+// Load loans KPIs from optimized view v_user_financial_summary (1 query instead of 3)
+$totalPrestado  = 0.0;
+$totalCobrado   = 0.0;
+$totalPendiente = 0.0;
+
+$stmtSum = $connect->prepare(
+    "SELECT prestamos_principal_activo, prestamos_cobrado, prestamos_pendientes
+     FROM v_user_financial_summary WHERE user_id = ?"
 );
-$totalPrestado = 0;
-if ($stmtTotalPrestado) {
-    $stmtTotalPrestado->bind_param("i", $_SESSION['userId']);
-    $stmtTotalPrestado->execute();
-    $totalPrestado = (float)$stmtTotalPrestado->get_result()->fetch_assoc()['total'];
-    $stmtTotalPrestado->close();
+if ($stmtSum) {
+    $stmtSum->bind_param("i", $userId);
+    $stmtSum->execute();
+    if ($rowSum = $stmtSum->get_result()->fetch_assoc()) {
+        $totalPrestado  = (float)$rowSum['prestamos_principal_activo'];
+        $totalCobrado   = (float)$rowSum['prestamos_cobrado'];
+        $totalPendiente = (float)$rowSum['prestamos_pendientes'];
+    }
+    $stmtSum->close();
 }
 
-$stmtTotalCobrado = $connect->prepare(
-    "SELECT COALESCE(SUM(amount_repaid),0) AS total FROM loans WHERE created_by=? AND is_deleted=0"
-);
-$totalCobrado = 0;
-if ($stmtTotalCobrado) {
-    $stmtTotalCobrado->bind_param("i", $_SESSION['userId']);
-    $stmtTotalCobrado->execute();
-    $totalCobrado = (float)$stmtTotalCobrado->get_result()->fetch_assoc()['total'];
-    $stmtTotalCobrado->close();
-}
-
-$stmtTotalPendiente = $connect->prepare(
-    "SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0"
-);
-$totalPendiente = 0;
-if ($stmtTotalPendiente) {
-    $stmtTotalPendiente->bind_param("i", $_SESSION['userId']);
-    $stmtTotalPendiente->execute();
-    $totalPendiente = (float)$stmtTotalPendiente->get_result()->fetch_assoc()['total'];
-    $stmtTotalPendiente->close();
-}
-
-// Accounts
+// Accounts strictly owned by current user
 $loanAccounts = [];
-$stmtLA = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY account_name");
-if ($stmtLA) { $stmtLA->execute(); $r=$stmtLA->get_result(); while($row=$r->fetch_assoc()) $loanAccounts[]=$row; $stmtLA->close(); }
+$stmtLA = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
+if ($stmtLA) { $stmtLA->bind_param("i", $userId); $stmtLA->execute(); $r=$stmtLA->get_result(); while($row=$r->fetch_assoc()) $loanAccounts[]=$row; $stmtLA->close(); }
 ?>
 <?php require_once 'modal/loanModal.php'; ?>
 

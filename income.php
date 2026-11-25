@@ -2,61 +2,67 @@
 <?php require_once 'modal/incomeModal.php'; ?>
 
 <?php
-// ── Stat Cards ────────────────────────────────────────────────────────────────
+// ── Stat Cards (SARGable date range & strict per-user scoping) ────────────────
+$userId       = (int)$_SESSION['userId'];
 $currentMonth = date('Y-m');
-$currentYear  = date('Y');
+$currentYear  = (int)date('Y');
+list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
+list($yearStart, $yearEnd)   = getYearDateBounds($currentYear);
 
-$stmtMes      = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE DATE_FORMAT(income_date,'%Y-%m')=? AND created_by=? AND is_deleted=0" );
+$stmtMes      = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE created_by=? AND is_deleted=0 AND status<>'CANCELLED' AND income_date>=? AND income_date<?");
 $totalMes     = 0;
 if ($stmtMes) {
-    $stmtMes->bind_param("si", $currentMonth, $_SESSION['userId']);
+    $stmtMes->bind_param("iss", $userId, $monthStart, $monthEnd);
     $stmtMes->execute();
     $totalMes = (float)$stmtMes->get_result()->fetch_assoc()['total'];
     $stmtMes->close();
 }
 
-$stmtYear = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=? AND is_deleted=0");
+$stmtYear = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE created_by=? AND is_deleted=0 AND status<>'CANCELLED' AND income_date>=? AND income_date<?");
 $totalYear = 0;
 if ($stmtYear) {
-    $stmtYear->bind_param("ii", $currentYear, $_SESSION['userId']);
+    $stmtYear->bind_param("iss", $userId, $yearStart, $yearEnd);
     $stmtYear->execute();
     $totalYear = (float)$stmtYear->get_result()->fetch_assoc()['total'];
     $stmtYear->close();
 }
 
-$stmtRec = $connect->prepare("SELECT COUNT(*) AS cnt FROM incomes WHERE is_recurring=1 AND status='CONFIRMED' AND created_by=? AND is_deleted=0");
+$stmtRec = $connect->prepare("SELECT COUNT(*) AS cnt FROM incomes WHERE created_by=? AND is_deleted=0 AND status='CONFIRMED' AND is_recurring=1");
 $totalRecurring = 0;
 if ($stmtRec) {
-  $stmtRec->bind_param("i", $_SESSION['userId']);
+  $stmtRec->bind_param("i", $userId);
   $stmtRec->execute();
   $totalRecurring = (int)$stmtRec->get_result()->fetch_assoc()['cnt'];
   $stmtRec->close();
 }
 
-// Accounts for select
-$stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY account_name");
+// Accounts for select (owned by user)
+$stmtAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
 $accounts = [];
 if ($stmtAcc) {
+  $stmtAcc->bind_param("i", $userId);
   $stmtAcc->execute();
   $resAcc = $stmtAcc->get_result();
   while ($row = $resAcc->fetch_assoc()) $accounts[] = $row;
   $stmtAcc->close();
 }
 
-// Financial categories
-$stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'INCOME' AND status=1 AND is_deleted=0 ORDER BY category_name");
+// Financial categories (owned by user)
+$stmtCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE created_by=? AND category_type='INCOME' AND status=1 AND is_deleted=0 ORDER BY category_name");
 $finCategories = [];
 if ($stmtCat) {
+  $stmtCat->bind_param("i", $userId);
   $stmtCat->execute();
   $resCat = $stmtCat->get_result();
   while ($row = $resCat->fetch_assoc()) $finCategories[] = $row;
   $stmtCat->close();
 }
 
-// Projects
-$stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
+// Projects (owned by user)
+$stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE created_by=? AND status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
 $projects = [];
 if ($stmtProj) {
+  $stmtProj->bind_param("i", $userId);
   $stmtProj->execute();
   $resProj = $stmtProj->get_result();
   while ($row = $resProj->fetch_assoc()) $projects[] = $row;

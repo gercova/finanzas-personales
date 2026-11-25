@@ -190,18 +190,20 @@
 </div>
 
 <?php
-// Accounts and categories for JS injection (expense page)
+// Accounts, categories, and projects for JS injection (strictly scoped to current user)
+$expUserId = (int)$_SESSION['userId'];
+
 $expAccounts = [];
-$stmtExpAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY account_name");
-if ($stmtExpAcc) { $stmtExpAcc->execute(); $r=$stmtExpAcc->get_result(); while($row=$r->fetch_assoc()) $expAccounts[]=$row; $stmtExpAcc->close(); }
+$stmtExpAcc = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
+if ($stmtExpAcc) { $stmtExpAcc->bind_param("i", $expUserId); $stmtExpAcc->execute(); $r=$stmtExpAcc->get_result(); while($row=$r->fetch_assoc()) $expAccounts[]=$row; $stmtExpAcc->close(); }
 
 $expCategories = [];
-$stmtExpCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE category_type = 'EXPENSE' AND status=1 AND is_deleted=0 ORDER BY category_name");
-if ($stmtExpCat) { $stmtExpCat->execute(); $r=$stmtExpCat->get_result(); while($row=$r->fetch_assoc()) $expCategories[]=$row; $stmtExpCat->close(); }
+$stmtExpCat = $connect->prepare("SELECT category_id AS id, category_name FROM financial_categories WHERE created_by=? AND category_type='EXPENSE' AND status=1 AND is_deleted=0 ORDER BY category_name");
+if ($stmtExpCat) { $stmtExpCat->bind_param("i", $expUserId); $stmtExpCat->execute(); $r=$stmtExpCat->get_result(); while($row=$r->fetch_assoc()) $expCategories[]=$row; $stmtExpCat->close(); }
 
 $expProjects = [];
-$stmtExpProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
-if ($stmtExpProj) { $stmtExpProj->execute(); $r=$stmtExpProj->get_result(); while($row=$r->fetch_assoc()) $expProjects[]=$row; $stmtExpProj->close(); }
+$stmtExpProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE created_by=? AND status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
+if ($stmtExpProj) { $stmtExpProj->bind_param("i", $expUserId); $stmtExpProj->execute(); $r=$stmtExpProj->get_result(); while($row=$r->fetch_assoc()) $expProjects[]=$row; $stmtExpProj->close(); }
 ?>
 <script>
 var expenseAccounts   = <?php echo json_encode($expAccounts); ?>;

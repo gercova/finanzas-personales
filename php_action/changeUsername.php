@@ -15,10 +15,25 @@
 		$userId = (int)$_SESSION['userId'];
 		$username = isset($_POST['username']) ? trim($_POST['username']) : '';
 
-		if(empty($username)){
-			$valid['messages'] = "El nombre de usuario no puede estar vacío.";
+		if(empty($username) || strlen($username) < 3){
+			$valid['messages'] = "El nombre de usuario debe tener al menos 3 caracteres.";
 			echo json_encode($valid);
 			exit();
+		}
+
+		// Prevent username collision with another user
+		$chk = $connect->prepare("SELECT user_id FROM users WHERE username = ? AND user_id <> ? LIMIT 1");
+		if ($chk) {
+			$chk->bind_param("si", $username, $userId);
+			$chk->execute();
+			$chkRes = $chk->get_result();
+			if ($chkRes && $chkRes->num_rows > 0) {
+				$chk->close();
+				$valid['messages'] = "Ese nombre de usuario ya está en uso por otro usuario.";
+				echo json_encode($valid);
+				exit();
+			}
+			$chk->close();
 		}
 
 		// 3. Update Username using Prepared Statement

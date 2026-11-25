@@ -1,71 +1,47 @@
 <?php require_once 'includes/header.php'; ?>
 
 <?php
-$userId = (int)$_SESSION['userId'];
-
-// ── 1. Saldo Disponible ────────────────────────────────────────────────────
-$stmtSaldo = $connect->prepare("SELECT COALESCE(SUM(current_balance),0) AS total FROM accounts WHERE status=1 AND is_deleted=0");
-$saldoDisponible = 0;
-if ($stmtSaldo) { $stmtSaldo->execute(); $saldoDisponible = (float)$stmtSaldo->get_result()->fetch_assoc()['total']; $stmtSaldo->close(); }
-
-// ── 2. Total Gastos (mes actual y año) ───────────────────────────────────
+$userId       = (int)$_SESSION['userId'];
 $currentMonth = date('Y-m');
-$currentYear  = date('Y');
+$currentYear  = (int)date('Y');
+list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
+list($yearStart, $yearEnd)   = getYearDateBounds($currentYear);
+$sixMonthsAgo                = date('Y-m-01', strtotime('-5 months'));
 
-$stmtGastoMes = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE DATE_FORMAT(expense_date,'%Y-%m')=? AND created_by=? AND is_deleted=0");
-$gastoMes = 0;
-if ($stmtGastoMes) { $stmtGastoMes->bind_param("si",$currentMonth,$userId); $stmtGastoMes->execute(); $gastoMes=(float)$stmtGastoMes->get_result()->fetch_assoc()['total']; $stmtGastoMes->close(); }
+$saldoDisponible        = 0.0;
+$gastoMes               = 0.0;
+$gastoAnio              = 0.0;
+$totalPrestamoPendiente = 0.0;
+$balanceTotal           = 0.0;
+$totalActivos           = 0.0;
+$patrimonioNeto         = 0.0;
+$ingresosAnio           = 0.0;
+$accList                = [];
+$monthlyExpenses        = [];
+$topCategories          = [];
 
-$stmtGastoAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM expenses WHERE YEAR(expense_date)=? AND created_by=? AND is_deleted=0");
-$gastoAnio = 0;
-if ($stmtGastoAnio) { $stmtGastoAnio->bind_param("ii",$currentYear,$userId); $stmtGastoAnio->execute(); $gastoAnio=(float)$stmtGastoAnio->get_result()->fetch_assoc()['total']; $stmtGastoAnio->close(); }
+// Single multi-result Stored Procedure call (replaces 9 separate queries)
+$repSets = callProcedureMulti(
+    $connect,
+    "CALL sp_get_financial_report(?, ?, ?, ?, ?, ?)",
+    "isssss",
+    [$userId, $yearStart, $yearEnd, $monthStart, $monthEnd, $sixMonthsAgo]
+);
 
-// ── 3. Total Préstamos Pendientes ─────────────────────────────────────────
-$stmtPrest = $connect->prepare("SELECT COALESCE(SUM(balance_pending),0) AS total FROM loans WHERE status IN ('PENDIENTE','PARCIAL') AND created_by=? AND is_deleted=0");
-$totalPrestamoPendiente = 0;
-if ($stmtPrest) { $stmtPrest->bind_param("i",$userId); $stmtPrest->execute(); $totalPrestamoPendiente=(float)$stmtPrest->get_result()->fetch_assoc()['total']; $stmtPrest->close(); }
-
-// ── 4. Balance Total ─────────────────────────────────────────────────────
-$balanceTotal = $saldoDisponible + $totalPrestamoPendiente;
-
-// ── 5. Patrimonio Neto (Balance + Activos ACTIVO) ─────────────────────────
-$stmtActivos = $connect->prepare("SELECT COALESCE(SUM(estimated_value),0) AS total FROM assets WHERE status='ACTIVO' AND created_by=? AND is_deleted=0");
-$totalActivos = 0;
-if ($stmtActivos) { $stmtActivos->bind_param("i",$userId); $stmtActivos->execute(); $totalActivos=(float)$stmtActivos->get_result()->fetch_assoc()['total']; $stmtActivos->close(); }
-
-$patrimonioNeto = $balanceTotal + $totalActivos;
-
-// ── 6. Total Ingresos Año ────────────────────────────────────────────────
-$stmtIngAnio = $connect->prepare("SELECT COALESCE(SUM(amount),0) AS total FROM incomes WHERE YEAR(income_date)=? AND created_by=? AND is_deleted=0");
-$ingresosAnio = 0;
-if ($stmtIngAnio) { $stmtIngAnio->bind_param("ii",$currentYear,$userId); $stmtIngAnio->execute(); $ingresosAnio=(float)$stmtIngAnio->get_result()->fetch_assoc()['total']; $stmtIngAnio->close(); }
-
-// ── 7. Accounts summary ──────────────────────────────────────────────────
-$stmtAccs = $connect->prepare("SELECT account_name, account_type, current_balance, currency FROM accounts WHERE status=1 AND is_deleted=0 ORDER BY current_balance DESC");
-$accList = [];
-if ($stmtAccs) { $stmtAccs->execute(); $r=$stmtAccs->get_result(); while($row=$r->fetch_assoc()) $accList[]=$row; $stmtAccs->close(); }
-
-// ── 8. Monthly expenses — last 6 months ─────────────────────────────────
-$stmtMonthly = $connect->prepare("
-    SELECT DATE_FORMAT(expense_date,'%Y-%m') AS mes,
-           COALESCE(SUM(amount),0) AS total
-    FROM expenses
-    WHERE created_by=? AND is_deleted=0 AND expense_date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
-    GROUP BY mes ORDER BY mes ASC
-");
-$monthlyExpenses = [];
-if ($stmtMonthly) { $stmtMonthly->bind_param("i",$userId); $stmtMonthly->execute(); $r=$stmtMonthly->get_result(); while($row=$r->fetch_assoc()) $monthlyExpenses[]=$row; $stmtMonthly->close(); }
-
-// ── 9. Top 5 expense categories this year ───────────────────────────────
-$stmtTopCat = $connect->prepare("
-    SELECT fc.category_name, COALESCE(SUM(e.amount),0) AS total
-    FROM expenses e
-    LEFT JOIN financial_categories fc ON e.category_id=fc.category_id
-    WHERE e.created_by=? AND YEAR(e.expense_date)=? AND e.is_deleted=0
-    GROUP BY fc.category_name ORDER BY total DESC LIMIT 5
-");
-$topCategories = [];
-if ($stmtTopCat) { $stmtTopCat->bind_param("ii",$userId,$currentYear); $stmtTopCat->execute(); $r=$stmtTopCat->get_result(); while($row=$r->fetch_assoc()) $topCategories[]=$row; $stmtTopCat->close(); }
+if (!empty($repSets[0][0])) {
+    $k = $repSets[0][0];
+    $saldoDisponible        = (float)$k['saldo_disponible'];
+    $gastoMes               = (float)$k['gasto_mes'];
+    $gastoAnio              = (float)$k['gasto_anio'];
+    $totalPrestamoPendiente = (float)$k['prestamos_pendientes'];
+    $balanceTotal           = (float)$k['balance_total'];
+    $totalActivos           = (float)$k['total_activos'];
+    $patrimonioNeto         = (float)$k['patrimonio_neto'];
+    $ingresosAnio           = (float)$k['ingresos_anio'];
+}
+if (!empty($repSets[1])) $accList         = $repSets[1];
+if (!empty($repSets[2])) $monthlyExpenses = $repSets[2];
+if (!empty($repSets[3])) $topCategories   = $repSets[3];
 ?>
 
 <div class="row">
