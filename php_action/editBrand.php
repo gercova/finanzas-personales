@@ -20,10 +20,11 @@
 			exit();
 		}
 
-		$sql = "UPDATE brands SET brand_name = ?, brand_active = ? WHERE brand_id = ?";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "UPDATE brands SET brand_name = ?, brand_active = ? WHERE brand_id = ? AND (created_by = ? OR created_by IS NULL) AND is_deleted = 0";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("sii", $brandName, $brandStatus, $brandId);
+			$stmt->bind_param("siii", $brandName, $brandStatus, $brandId, $userId);
 			if($stmt->execute()){
 				$valid['success'] = true;
 				$valid['messages'] = "Fabricante actualizado exitosamente.";	

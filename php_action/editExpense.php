@@ -5,16 +5,16 @@ header('Content-Type: application/json');
 
 verifyCsrfToken();
 
-$expense_id  = (int)($_POST['expense_id']       ?? 0);
-$concept     = cleanInput($_POST['concept']      ?? '');
-$account_id  = (int)($_POST['account_id']        ?? 0);
-$category_id = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
-$project_id  = !empty($_POST['project_id'])  ? (int)$_POST['project_id']  : null;
+$expense_id   = (int)($_POST['expense_id']       ?? 0);
+$concept      = cleanInput($_POST['concept']      ?? '');
+$account_id   = (int)($_POST['account_id']        ?? 0);
+$category_id  = !empty($_POST['category_id']) ? (int)$_POST['category_id'] : null;
+$project_id   = !empty($_POST['project_id'])  ? (int)$_POST['project_id']  : null;
 $expense_date = cleanInput($_POST['expense_date'] ?? '');
-$amount      = (float)($_POST['amount']           ?? 0);
-$status      = cleanInput($_POST['status']        ?? 'PAGADO');
-$notes       = cleanInput($_POST['notes']         ?? '');
-$userId      = (int)$_SESSION['userId'];
+$amount       = (float)($_POST['amount']           ?? 0);
+$status       = cleanInput($_POST['status']        ?? 'PAGADO');
+$notes        = cleanInput($_POST['notes']         ?? '');
+$userId       = (int)$_SESSION['userId'];
 
 $validStatuses = ['PAGADO', 'PENDIENTE'];
 if (!in_array($status, $validStatuses)) $status = 'PAGADO';
@@ -25,13 +25,18 @@ if ($expense_id <= 0 || empty($concept) || $account_id <= 0 || $amount <= 0 || e
 }
 
 // Get old record
-$stmtOld = $connect->prepare("SELECT amount, account_id, status, receipt_image FROM expenses WHERE expense_id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT receipt_image FROM expenses WHERE expense_id=? AND created_by=? AND is_deleted=0");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $expense_id, $userId);
 $stmtOld->execute();
 $old = $stmtOld->get_result()->fetch_assoc();
 $stmtOld->close();
 if (!$old) { echo json_encode(['success'=>false,'messages'=>'Registro no encontrado.']); exit; }
+
+if (!verifyOwnedEntity($connect, 'accounts', 'account_id', $account_id, $userId)) {
+    echo json_encode(['success' => false, 'messages' => 'Cuenta no válida o sin permiso.']);
+    exit;
+}
 
 $receipt_image = $old['receipt_image'];
 
@@ -48,37 +53,31 @@ if (!empty($_FILES['receipt_image']['name'])) {
     $ext = pathinfo($_FILES['receipt_image']['name'], PATHINFO_EXTENSION);
     $filename = bin2hex(random_bytes(16)) . '.' . strtolower($ext);
     $uploadDir = __DIR__ . '/../assests/images/receipts/';
-    if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-    if (move_uploaded_file($_FILES['receipt_image']['tmp_name'], $uploadDir . $filename)) {
+    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+    if (is_writable($uploadDir) && @move_uploaded_file($_FILES['receipt_image']['tmp_name'], $uploadDir . $filename)) {
         if ($old['receipt_image'] && file_exists(__DIR__ . '/../' . $old['receipt_image'])) {
             @unlink(__DIR__ . '/../' . $old['receipt_image']);
         }
         $receipt_image = 'assests/images/receipts/' . $filename;
+    } else {
+        echo json_encode(['success'=>false,'messages'=>'No se pudo guardar el comprobante (verifique permisos de carpeta).']);
+        exit;
     }
 }
 
 $stmt = $connect->prepare(
     "UPDATE expenses SET concept=?, account_id=?, category_id=?, project_id=?, expense_date=?, amount=?, status=?, receipt_image=?, notes=?
-     WHERE expense_id=? AND created_by=?"
+     WHERE expense_id=? AND created_by=? AND is_deleted=0"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta: ' . $connect->error]); exit; }
-$stmt->bind_param("siiiidsssii",
+$stmt->bind_param("siiisdsssii",
     $concept, $account_id, $category_id, $project_id,
     $expense_date, $amount, $status, $receipt_image, $notes,
     $expense_id, $userId
 );
 
+// Account balance adjustment is handled automatically by trg_expenses_after_update
 if ($stmt->execute()) {
-    // Reverse old balance effect
-    if ($old['status'] === 'PAGADO') {
-        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
-        if ($s) { $s->bind_param("di", $old['amount'], $old['account_id']); $s->execute(); $s->close(); }
-    }
-    // Apply new balance effect
-    if ($status === 'PAGADO') {
-        $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
-        if ($s) { $s->bind_param("di", $amount, $account_id); $s->execute(); $s->close(); }
-    }
     echo json_encode(['success'=>true,'messages'=>'Gasto actualizado exitosamente.']);
 } else {
     echo json_encode(['success'=>false,'messages'=>'Error al actualizar: '.$connect->error]);

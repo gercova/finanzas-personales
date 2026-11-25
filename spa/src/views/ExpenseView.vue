@@ -73,14 +73,17 @@
       </template>
     </AppModal>
 
-    <ImportModal ref="importRef" module="expense" @imported="store.reload()" />
+    <ImportModal ref="importRef" module="expense" @imported="onMutated" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useExpenseStore } from '@/stores/useExpenseStore'
 import { useDashboardStore } from '@/stores/useDashboardStore'
+import { useReportStore } from '@/stores/useReportStore'
+import { useAccountStore } from '@/stores/useAccountStore'
+import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
@@ -90,6 +93,9 @@ import * as api    from '@/api'
 const toast          = inject('toast')
 const store          = useExpenseStore()
 const dashboardStore = useDashboardStore()
+const reportStore    = useReportStore()
+const accountStore   = useAccountStore()
+const optionsStore   = useFormOptionsStore()
 
 const showAdd   = ref(false)
 const showEdit  = ref(false)
@@ -100,9 +106,9 @@ const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
 
-const accounts   = ref(window.expenseAccounts   || [])
-const categories = ref(window.expenseCategories || [])
-const projects   = ref(window.expenseProjects   || [])
+const accounts   = computed(() => optionsStore.accounts)
+const categories = computed(() => optionsStore.expenseCategories)
+const projects   = computed(() => optionsStore.projects)
 
 const spendLimit = computed(() => {
   const kpi = dashboardStore.kpi
@@ -158,15 +164,21 @@ function fmt(n) {
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
+async function onMutated() {
+  reportStore.invalidate()
+  accountStore.invalidate()
+  await Promise.all([store.reload(), dashboardStore.reload()])
+}
+
 async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el monto sea mayor a 0.'; return }
     const { data } = await api.createExpense(fd)
     if (data.success) {
       showAdd.value = false
-      await Promise.all([store.reload(), dashboardStore.reload()])
+      await onMutated()
       toast.success(data.messages)
     } else {
       formError.value = data.messages
@@ -182,11 +194,11 @@ async function submitEdit() {
   saving.value = true; formError.value = ''
   try {
     const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el monto sea mayor a 0.'; return }
     const { data } = await api.editExpense(fd)
     if (data.success) {
       showEdit.value = false
-      await Promise.all([store.reload(), dashboardStore.reload()])
+      await onMutated()
       toast.success(data.messages)
     } else {
       formError.value = data.messages
@@ -206,9 +218,13 @@ async function handleTableAction(e) {
     const id = parseInt(el.dataset.id)
     const { data } = await api.getExpenseData(id)
     if (data.success) {
+      resetForm()
       editId.value = id
       showEdit.value = true
-      setTimeout(() => editFormRef.value?.setData(data.data), 50)
+      await nextTick()
+      editFormRef.value?.setData(data.data)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar el gasto.')
     }
   }
   if (el.classList.contains('remove-expense')) {
@@ -216,7 +232,7 @@ async function handleTableAction(e) {
     if (!confirm('¿Eliminar este gasto?')) return
     const { data } = await api.removeExpense(parseInt(el.dataset.id))
     if (data.success) {
-      await Promise.all([store.reload(), dashboardStore.reload()])
+      await onMutated()
       toast.success(data.messages)
     } else {
       toast.danger(data.messages)
@@ -225,7 +241,7 @@ async function handleTableAction(e) {
 }
 
 onMounted(async () => {
-  await Promise.all([store.load(), dashboardStore.load()])
+  await Promise.all([store.load(), dashboardStore.load(), optionsStore.load()])
   document.addEventListener('click', handleTableAction)
 })
 

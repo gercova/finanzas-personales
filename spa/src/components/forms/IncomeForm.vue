@@ -10,7 +10,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Monto (S/) <span class="text-danger">*</span></label>
-          <input v-model="f.amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required>
+          <input v-model="f.amount" type="number" step="0.01" min="0.01" class="form-control" placeholder="0.00" required>
         </div>
       </div>
     </div>
@@ -56,9 +56,9 @@
         <div class="form-group">
           <label>Estado</label>
           <select v-model="f.status" class="form-control">
-            <option value="ACTIVO">ACTIVO</option>
-            <option value="PENDIENTE">PENDIENTE</option>
-            <option value="CANCELADO">CANCELADO</option>
+            <option value="CONFIRMED">Confirmado</option>
+            <option value="PENDING">Pendiente</option>
+            <option value="CANCELLED">Cancelado</option>
           </select>
         </div>
       </div>
@@ -76,9 +76,9 @@
 </template>
 
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive } from 'vue'
 
-const props = defineProps({
+defineProps({
   accounts:   { type: Array, default: () => [] },
   categories: { type: Array, default: () => [] },
   projects:   { type: Array, default: () => [] },
@@ -90,32 +90,54 @@ const today = new Date().toISOString().slice(0, 10)
 const f = reactive({
   income_id: '', concept: '', amount: '', account_id: '',
   category_id: '', project_id: '', income_date: today,
-  status: 'ACTIVO', is_recurring: '0', notes: ''
+  status: 'CONFIRMED', is_recurring: '0', notes: ''
 })
 
 function setData(d) {
+  if (!d) return
+  const statusMap = {
+    CONFIRMED: 'CONFIRMED', ACTIVO: 'CONFIRMED',
+    PENDING: 'PENDING',     PENDIENTE: 'PENDING',
+    CANCELLED: 'CANCELLED', CANCELADO: 'CANCELLED',
+  }
   Object.assign(f, {
     income_id:    d.id || d.income_id || '',
     concept:      d.concept || '',
-    amount:       d.amount || '',
-    account_id:   d.account_id || '',
-    category_id:  d.category_id || '',
-    project_id:   d.project_id  || '',
+    amount:       d.amount ?? '',
+    account_id:   d.account_id ? String(d.account_id) : '',
+    category_id:  d.category_id ? String(d.category_id) : '',
+    project_id:   d.project_id  ? String(d.project_id)  : '',
     income_date:  d.income_date || today,
-    status:       d.status || 'ACTIVO',
+    status:       statusMap[d.status] || 'CONFIRMED',
     is_recurring: d.is_recurring == 1 ? '1' : '0',
     notes:        d.notes || '',
   })
 }
 
 function getFormData() {
-  if (!f.concept || !f.amount || !f.account_id || !f.income_date) return null
+  const amt = parseFloat(f.amount)
+  if (!f.concept.trim() || isNaN(amt) || amt <= 0 || !f.account_id || !f.income_date) return null
   const fd = new FormData()
-  Object.entries(f).forEach(([k, v]) => v !== '' && v !== null && fd.append(k, v))
+  if (f.income_id) fd.append('income_id', f.income_id)
+  fd.append('concept',      f.concept.trim())
+  fd.append('amount',       amt.toFixed(2))
+  fd.append('account_id',   f.account_id)
+  fd.append('category_id',  f.category_id || '')
+  fd.append('project_id',   f.project_id  || '')
+  fd.append('income_date',  f.income_date)
+  fd.append('status',       f.status)
+  fd.append('is_recurring', f.is_recurring)
+  fd.append('notes',        f.notes || '')
   return fd
 }
 
-function reset() { Object.assign(f, { income_id:'', concept:'', amount:'', account_id:'', category_id:'', project_id:'', income_date: today, status:'ACTIVO', is_recurring:'0', notes:'' }) }
+function reset() {
+  Object.assign(f, {
+    income_id: '', concept: '', amount: '', account_id: '',
+    category_id: '', project_id: '', income_date: today,
+    status: 'CONFIRMED', is_recurring: '0', notes: ''
+  })
+}
 
 defineExpose({ getFormData, setData, reset })
 </script>

@@ -10,7 +10,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Monto (S/) <span class="text-danger">*</span></label>
-          <input v-model="f.amount" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required>
+          <input v-model="f.amount" type="number" step="0.01" min="0.01" class="form-control" placeholder="0.00" required>
         </div>
       </div>
     </div>
@@ -68,8 +68,8 @@
           <div v-if="previewSrc" style="margin-top:8px;">
             <img :src="previewSrc" style="max-height:120px;border-radius:4px;border:1px solid #ddd;">
           </div>
-          <div v-if="currentImage && !previewSrc" style="margin-top:4px;font-size:12px;" class="text-muted">
-            Comprobante actual: <a :href="'/' + currentImage" target="_blank">ver</a>
+          <div v-else-if="currentImage" style="margin-top:4px;font-size:12px;" class="text-muted">
+            Comprobante actual: <a :href="baseUrl + currentImage" target="_blank">ver</a>
           </div>
         </div>
       </div>
@@ -85,6 +85,7 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { getBaseURL } from '@/api/http'
 
 defineProps({
   accounts:   { type: Array, default: () => [] },
@@ -93,9 +94,10 @@ defineProps({
   editId:     { type: Number, default: null },
 })
 
-const today = new Date().toISOString().slice(0, 10)
-const fileRef    = ref(null)
-const previewSrc = ref(null)
+const baseUrl      = getBaseURL()
+const today        = new Date().toISOString().slice(0, 10)
+const fileRef      = ref(null)
+const previewSrc   = ref(null)
 const currentImage = ref(null)
 
 const f = reactive({
@@ -113,15 +115,17 @@ function onFile(e) {
 }
 
 function setData(d) {
+  if (!d) return
   currentImage.value = d.receipt_image || null
   previewSrc.value = null
+  if (fileRef.value) fileRef.value.value = ''
   Object.assign(f, {
     expense_id:   d.id || d.expense_id || '',
     concept:      d.concept || '',
-    amount:       d.amount || '',
-    account_id:   d.account_id || '',
-    category_id:  d.category_id || '',
-    project_id:   d.project_id || '',
+    amount:       d.amount ?? '',
+    account_id:   d.account_id ? String(d.account_id) : '',
+    category_id:  d.category_id ? String(d.category_id) : '',
+    project_id:   d.project_id ? String(d.project_id) : '',
     expense_date: d.expense_date || today,
     status:       d.status || 'PAGADO',
     notes:        d.notes || '',
@@ -129,9 +133,18 @@ function setData(d) {
 }
 
 function getFormData() {
-  if (!f.concept || !f.amount || !f.account_id || !f.expense_date) return null
+  const amt = parseFloat(f.amount)
+  if (!f.concept.trim() || isNaN(amt) || amt <= 0 || !f.account_id || !f.expense_date) return null
   const fd = new FormData()
-  Object.entries(f).forEach(([k, v]) => v !== '' && v !== null && fd.append(k, v))
+  if (f.expense_id) fd.append('expense_id', f.expense_id)
+  fd.append('concept',      f.concept.trim())
+  fd.append('amount',       amt.toFixed(2))
+  fd.append('account_id',   f.account_id)
+  fd.append('category_id',  f.category_id || '')
+  fd.append('project_id',   f.project_id  || '')
+  fd.append('expense_date', f.expense_date)
+  fd.append('status',       f.status)
+  fd.append('notes',        f.notes || '')
   if (fileRef.value?.files[0]) fd.append('receipt_image', fileRef.value.files[0])
   return fd
 }

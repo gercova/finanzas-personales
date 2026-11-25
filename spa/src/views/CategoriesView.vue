@@ -26,15 +26,16 @@
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
         <form @submit.prevent="submitAdd" class="form-horizontal">
           <div class="form-group">
-            <label class="col-sm-4 control-label">Nombre Categoría: </label>
+            <label class="col-sm-4 control-label">Nombre Categoría <span class="text-danger">*</span></label>
             <div class="col-sm-7">
               <input type="text" class="form-control" v-model="form.categoriesName" placeholder="Nombre Categoría" required />
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-4 control-label">Estado: </label>
+            <label class="col-sm-4 control-label">Estado <span class="text-danger">*</span></label>
             <div class="col-sm-7">
-              <select class="form-control" v-model="form.categoriesStatus">
+              <select class="form-control" v-model="form.categoriesStatus" required>
+                <option value="">-- Selecciona --</option>
                 <option value="1">Disponible</option>
                 <option value="2">No disponible</option>
               </select>
@@ -56,15 +57,16 @@
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
         <form @submit.prevent="submitEdit" class="form-horizontal">
           <div class="form-group">
-            <label class="col-sm-4 control-label">Nombre Categoría: </label>
+            <label class="col-sm-4 control-label">Nombre Categoría <span class="text-danger">*</span></label>
             <div class="col-sm-7">
-              <input type="text" class="form-control" v-model="editForm.categoriesName" placeholder="Nombre Categoría" required />
+              <input type="text" class="form-control" v-model="editForm.editCategoriesName" placeholder="Nombre Categoría" required />
             </div>
           </div>
           <div class="form-group">
-            <label class="col-sm-4 control-label">Estado: </label>
+            <label class="col-sm-4 control-label">Estado <span class="text-danger">*</span></label>
             <div class="col-sm-7">
-              <select class="form-control" v-model="editForm.categoriesStatus">
+              <select class="form-control" v-model="editForm.editCategoriesStatus" required>
+                <option value="">-- Selecciona --</option>
                 <option value="1">Disponible</option>
                 <option value="2">No disponible</option>
               </select>
@@ -85,48 +87,61 @@
 <script setup>
 import { ref, reactive, inject, onMounted, onUnmounted } from 'vue'
 import { usePosCategoryStore } from '@/stores/usePosCategoryStore'
+import { useProductStore } from '@/stores/useProductStore'
+import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
 import DataTable from '@/components/DataTable.vue'
 import AppModal  from '@/components/AppModal.vue'
 import * as api  from '@/api'
 
-const toast  = inject('toast')
-const store  = usePosCategoryStore()
+const toast        = inject('toast')
+const store        = usePosCategoryStore()
+const productStore = useProductStore()
+const optionsStore = useFormOptionsStore()
+
 const showAdd  = ref(false)
 const showEdit = ref(false)
 const saving   = ref(false)
 const formError = ref('')
 const editId    = ref(null)
 
-const form = reactive({ categoriesName: '', categoriesStatus: '1' })
-const editForm = reactive({ categoriesName: '', categoriesStatus: '1' })
+const form     = reactive({ categoriesName: '', categoriesStatus: '1' })
+const editForm = reactive({ editCategoriesName: '', editCategoriesStatus: '1' })
 
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = ''; form.categoriesName = ''; form.categoriesStatus = '1' }
 
+async function onMutated() {
+  productStore.invalidate()
+  await Promise.all([store.reload(), optionsStore.reload()])
+}
+
 async function submitAdd() {
-  if (!form.categoriesName.trim()) { formError.value = 'El nombre es obligatorio.'; return }
+  if (!form.categoriesName.trim() || !form.categoriesStatus) { formError.value = 'Todos los campos son requeridos.'; return }
   saving.value = true; formError.value = ''
   try {
     const fd = new FormData()
     fd.append('categoriesName', form.categoriesName.trim())
     fd.append('categoriesStatus', form.categoriesStatus)
     const { data } = await api.createCategories(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
 }
 
 async function submitEdit() {
-  if (!editForm.categoriesName.trim()) { formError.value = 'El nombre es obligatorio.'; return }
+  if (!editId.value || !editForm.editCategoriesName.trim() || !editForm.editCategoriesStatus) {
+    formError.value = 'Todos los campos son requeridos.'
+    return
+  }
   saving.value = true; formError.value = ''
   try {
     const fd = new FormData()
-    fd.append('categoriesId', editId.value)
-    fd.append('categoriesName', editForm.categoriesName.trim())
-    fd.append('categoriesStatus', editForm.categoriesStatus)
+    fd.append('editCategoriesId', editId.value)
+    fd.append('editCategoriesName', editForm.editCategoriesName.trim())
+    fd.append('editCategoriesStatus', editForm.editCategoriesStatus)
     const { data } = await api.editCategories(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -141,13 +156,16 @@ async function handleTableAction(e) {
   if (editMatch) {
     e.preventDefault()
     const id = parseInt(editMatch[1])
-    editId.value = id
-    // Get row text from the clicked row
-    const rowEl = el.closest('tr')
-    if (rowEl) {
-      editForm.categoriesName = rowEl.children[0]?.textContent?.trim() || ''
+    const { data } = await api.fetchSelectedCategories(id)
+    if (data) {
+      formError.value                = ''
+      editId.value                   = id
+      editForm.editCategoriesName    = data.categories_name || ''
+      editForm.editCategoriesStatus  = String(data.categories_active ?? '1')
+      showEdit.value                 = true
+    } else {
+      toast.danger('No se pudo cargar la categoría.')
     }
-    showEdit.value = true
   }
 
   const removeMatch = onclickAttr.match(/removeCategories\((\d+)\)/)
@@ -155,7 +173,7 @@ async function handleTableAction(e) {
     e.preventDefault()
     if (!confirm('¿Eliminar esta categoría?')) return
     const { data } = await api.removeCategories(parseInt(removeMatch[1]))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
+    if (data.success) { await onMutated(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 }

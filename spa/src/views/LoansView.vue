@@ -112,13 +112,17 @@
       </template>
     </AppModal>
 
-    <ImportModal ref="importRef" module="loan" @imported="store.reload()" />
+    <ImportModal ref="importRef" module="loan" @imported="onMutated" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useLoanStore } from '@/stores/useLoanStore'
+import { useDashboardStore } from '@/stores/useDashboardStore'
+import { useReportStore } from '@/stores/useReportStore'
+import { useAccountStore } from '@/stores/useAccountStore'
+import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
@@ -126,8 +130,13 @@ import LoanForm    from '@/components/forms/LoanForm.vue'
 import PaymentForm from '@/components/forms/PaymentForm.vue'
 import * as api    from '@/api'
 
-const toast    = inject('toast')
-const store    = useLoanStore()
+const toast          = inject('toast')
+const store          = useLoanStore()
+const dashboardStore = useDashboardStore()
+const reportStore    = useReportStore()
+const accountStore   = useAccountStore()
+const optionsStore   = useFormOptionsStore()
+
 const showAdd  = ref(false)
 const showEdit = ref(false)
 const showPay  = ref(false)
@@ -140,7 +149,7 @@ const addFormRef  = ref(null)
 const editFormRef = ref(null)
 const payFormRef  = ref(null)
 
-const accounts = ref(window.loanAccounts || [])
+const accounts = computed(() => optionsStore.accounts)
 
 const loanStats = computed(() => {
   let prestado = 0, cobrado = 0, pendiente = 0
@@ -163,13 +172,20 @@ function fmt(n) {
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
+async function onMutated() {
+  dashboardStore.invalidate()
+  reportStore.invalidate()
+  accountStore.invalidate()
+  await store.reload()
+}
+
 async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el capital sea mayor a 0.'; return }
     const { data } = await api.createLoan(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -179,9 +195,9 @@ async function submitEdit() {
   saving.value = true; formError.value = ''
   try {
     const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el capital sea mayor a 0.'; return }
     const { data } = await api.editLoan(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -191,10 +207,9 @@ async function submitPayment() {
   saving.value = true; formError.value = ''
   try {
     const fd = payFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
-    fd.append('loan_id', editId.value)
+    if (!fd) { formError.value = 'Seleccione la cuenta destino e ingrese un monto mayor a 0.'; return }
     const { data } = await api.addLoanPayment(fd)
-    if (data.success) { showPay.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showPay.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -209,9 +224,13 @@ async function handleTableAction(e) {
     const id = parseInt(el.dataset.id)
     const { data } = await api.getLoanData(id)
     if (data.success) {
+      resetForm()
       editId.value = id
       showEdit.value = true
-      setTimeout(() => editFormRef.value?.setData(data.data), 50)
+      await nextTick()
+      editFormRef.value?.setData(data.data)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar el préstamo.')
     }
   }
 
@@ -219,7 +238,7 @@ async function handleTableAction(e) {
     e.preventDefault()
     if (!confirm('¿Eliminar este préstamo? Esta acción no se puede deshacer.')) return
     const { data } = await api.removeLoan(parseInt(el.dataset.id))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
+    if (data.success) { await onMutated(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 
@@ -228,7 +247,7 @@ async function handleTableAction(e) {
     const id = parseInt(el.dataset.id)
     const status = el.dataset.status
     const { data } = await api.updateLoanStatus(id, status)
-    if (data.success) { await store.reload(); toast.success(data.messages) }
+    if (data.success) { await onMutated(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 
@@ -237,18 +256,23 @@ async function handleTableAction(e) {
     const id = parseInt(el.dataset.id)
     const { data } = await api.getLoanData(id)
     if (data.success) {
+      resetForm()
       editId.value = id
       payInfo.value = {
         borrower: data.data.borrower_name,
         pending:  data.data.balance_pending,
       }
       showPay.value = true
+      await nextTick()
+      payFormRef.value?.setLoanId(id)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar el préstamo.')
     }
   }
 }
 
 onMounted(async () => {
-  await store.load()
+  await Promise.all([store.load(), optionsStore.load()])
   document.addEventListener('click', handleTableAction)
 })
 

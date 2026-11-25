@@ -9,20 +9,21 @@ if (!verifyCsrfToken()) {
     echo json_encode($valid); exit();
 }
 
-$id = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
+$userId = (int)$_SESSION['userId'];
+$id     = isset($_POST['project_id']) ? (int)$_POST['project_id'] : 0;
 if ($id < 1) {
     $valid['messages'] = 'ID de proyecto inválido.';
     echo json_encode($valid); exit();
 }
 
-$stmt = $connect->prepare("UPDATE projects SET is_deleted = 1, deleted_at = NOW() WHERE project_id = ?");
+$stmt = $connect->prepare("UPDATE projects SET is_deleted = 1, deleted_at = NOW() WHERE project_id = ? AND (created_by = ? OR created_by IS NULL)");
 if ($stmt) {
-    $stmt->bind_param("i", $id);
-    if ($stmt->execute()) {
+    $stmt->bind_param("ii", $id, $userId);
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
         $valid['success']  = true;
         $valid['messages'] = 'Proyecto eliminado exitosamente (borrado lógico).';
     } else {
-        $valid['messages'] = 'Error al eliminar el proyecto.';
+        $valid['messages'] = 'No se pudo eliminar el proyecto o no encontrado.';
     }
     $stmt->close();
 }

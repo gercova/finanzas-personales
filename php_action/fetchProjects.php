@@ -2,6 +2,8 @@
 require_once 'core.php';
 header('Content-Type: application/json');
 
+$userId = (int)$_SESSION['userId'];
+
 $stmt = $connect->prepare("
     SELECT
         p.project_id,
@@ -16,10 +18,11 @@ $stmt = $connect->prepare("
     FROM projects p
     LEFT JOIN incomes  i ON i.project_id = p.project_id AND i.is_deleted = 0
     LEFT JOIN expenses e ON e.project_id = p.project_id AND e.is_deleted = 0
-    WHERE p.is_deleted = 0
+    WHERE p.is_deleted = 0 AND (p.created_by = ? OR p.created_by IS NULL)
     GROUP BY p.project_id
     ORDER BY p.created_at DESC
 ");
+$stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 
@@ -40,7 +43,6 @@ while ($row = $result->fetch_assoc()) {
     $income  = (float)$row['project_income'];
     $expense = (float)$row['project_expense'];
     $budget  = (float)$row['budget'];
-    // Burn ratio against max(income, budget) to avoid div by zero
     $base    = max($income, $budget, 1);
     $ratio   = $expense / $base;
 

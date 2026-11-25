@@ -20,10 +20,11 @@
 			exit();
 		}
 
-		$sql = "UPDATE categories SET categories_name = ?, categories_active = ? WHERE categories_id = ?";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "UPDATE categories SET categories_name = ?, categories_active = ? WHERE categories_id = ? AND (created_by = ? OR created_by IS NULL) AND is_deleted = 0";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("sii", $brandName, $brandStatus, $categoriesId);
+			$stmt->bind_param("siii", $brandName, $brandStatus, $categoriesId, $userId);
 			if($stmt->execute()){
 				$valid['success'] = true;
 				$valid['messages'] = "Categoría actualizada exitosamente.";	

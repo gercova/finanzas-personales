@@ -26,7 +26,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Valor Estimado S/. <span class="text-danger">*</span></label>
-          <input v-model="f.estimated_value" type="number" step="0.01" min="0"
+          <input v-model="f.estimated_value" type="number" step="0.01" min="0.01"
                  class="form-control" placeholder="0.00" required>
         </div>
       </div>
@@ -82,7 +82,7 @@
                  style="max-height:80px;border-radius:4px;">
           </div>
           <div v-else-if="currentImage" style="margin-top:4px;font-size:12px;" class="text-muted">
-            Imagen actual: <a :href="'/' + currentImage" target="_blank">ver</a>
+            Imagen actual: <a :href="baseUrl + currentImage" target="_blank">ver</a>
           </div>
         </div>
       </div>
@@ -97,9 +97,11 @@
 
 <script setup>
 import { reactive, ref } from 'vue'
+import { getBaseURL } from '@/api/http'
 
 defineProps({ editId: { type: Number, default: null } })
 
+const baseUrl      = getBaseURL()
 const fileRef      = ref(null)
 const previewSrc   = ref(null)
 const currentImage = ref(null)
@@ -120,52 +122,53 @@ function onFile(e) {
 }
 
 function setData(d) {
+  if (!d) return
   currentImage.value = d.image_path || null
   previewSrc.value   = null
+  if (fileRef.value) fileRef.value.value = ''
   Object.assign(f, {
     asset_id:            d.asset_id            || '',
     asset_name:          d.asset_name          || '',
     category:            d.category            || '',
-    estimated_value:     d.estimated_value     || '',
-    purchase_price:      d.purchase_price      || '',
+    estimated_value:     d.estimated_value     ?? '',
+    purchase_price:      d.purchase_price      ?? '',
     purchase_date:       d.purchase_date       || '',
     document_number:     d.document_number     || '',
     location_or_custody: d.location_or_custody || '',
     status:              d.status              || 'ACTIVO',
-    notes:               d.notes              || '',
+    notes:               d.notes               || '',
   })
 }
 
 function getFormData() {
-  if (!f.asset_name || !f.category || !f.estimated_value) return null
+  const est = parseFloat(f.estimated_value)
+  if (!f.asset_name.trim() || !f.category || isNaN(est) || est <= 0) return null
 
   const fd     = new FormData()
   const isEdit = !!f.asset_id
 
   if (isEdit) {
-    // editAsset.php expects every field prefixed with "edit_"
     fd.append('edit_asset_id',            f.asset_id)
-    fd.append('edit_asset_name',          f.asset_name)
+    fd.append('edit_asset_name',          f.asset_name.trim())
     fd.append('edit_category',            f.category)
-    fd.append('edit_estimated_value',     f.estimated_value)
-    fd.append('edit_purchase_price',      f.purchase_price)
-    fd.append('edit_purchase_date',       f.purchase_date)
-    fd.append('edit_document_number',     f.document_number)
-    fd.append('edit_location_or_custody', f.location_or_custody)
+    fd.append('edit_estimated_value',     est.toFixed(2))
+    fd.append('edit_purchase_price',      f.purchase_price || '0')
+    fd.append('edit_purchase_date',       f.purchase_date || '')
+    fd.append('edit_document_number',     f.document_number || '')
+    fd.append('edit_location_or_custody', f.location_or_custody || '')
     fd.append('edit_status',              f.status)
-    fd.append('edit_notes',               f.notes)
+    fd.append('edit_notes',               f.notes || '')
     if (fileRef.value?.files[0]) fd.append('edit_asset_image', fileRef.value.files[0])
   } else {
-    // createAsset.php expects plain field names
-    fd.append('asset_name',          f.asset_name)
+    fd.append('asset_name',          f.asset_name.trim())
     fd.append('category',            f.category)
-    fd.append('estimated_value',     f.estimated_value)
-    fd.append('purchase_price',      f.purchase_price)
-    fd.append('purchase_date',       f.purchase_date)
-    fd.append('document_number',     f.document_number)
-    fd.append('location_or_custody', f.location_or_custody)
+    fd.append('estimated_value',     est.toFixed(2))
+    fd.append('purchase_price',      f.purchase_price || '0')
+    fd.append('purchase_date',       f.purchase_date || '')
+    fd.append('document_number',     f.document_number || '')
+    fd.append('location_or_custody', f.location_or_custody || '')
     fd.append('status',              f.status)
-    fd.append('notes',               f.notes)
+    fd.append('notes',               f.notes || '')
     if (fileRef.value?.files[0]) fd.append('asset_image', fileRef.value.files[0])
   }
 

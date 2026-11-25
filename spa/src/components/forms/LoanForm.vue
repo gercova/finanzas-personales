@@ -45,7 +45,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Capital Prestado (S/) <span class="text-danger">*</span></label>
-          <input v-model="f.principal_amount" type="number" step="0.01" min="0"
+          <input v-model="f.principal_amount" type="number" step="0.01" min="0.01"
                  class="form-control" placeholder="0.00" required @input="calcTotal">
         </div>
       </div>
@@ -54,15 +54,15 @@
           <label>Tipo de Interés</label>
           <div>
             <label class="radio-inline">
-              <input type="radio" v-model="f.interest_type" value="NONE" @change="calcTotal">
+              <input type="radio" v-model="f.interest_type" value="NONE" @change="onInterestTypeChange">
               Sin Interés
             </label>
             <label class="radio-inline">
-              <input type="radio" v-model="f.interest_type" value="PERCENTAGE" @change="calcTotal">
+              <input type="radio" v-model="f.interest_type" value="PERCENTAGE" @change="onInterestTypeChange">
               %
             </label>
             <label class="radio-inline">
-              <input type="radio" v-model="f.interest_type" value="FIXED" @change="calcTotal">
+              <input type="radio" v-model="f.interest_type" value="FIXED" @change="onInterestTypeChange">
               Fijo S/
             </label>
           </div>
@@ -130,45 +130,56 @@ const totalReceivable = computed(() => {
   return p.toFixed(2)
 })
 
+function onInterestTypeChange() {
+  if (f.interest_type === 'NONE') {
+    f.interest_value = ''
+  }
+  calcTotal()
+}
+
 function calcTotal() { f.total_receivable = totalReceivable.value }
 
 function setData(d) {
-  // Normalise interest_type to English values (PHP may store NONE/PERCENTAGE/FIXED)
-  const intMap = { NONE: 'NONE', PERCENTAGE: 'PERCENTAGE', FIXED: 'FIXED',
-                   NINGUNO: 'NONE', PORCENTAJE: 'PERCENTAGE', FIJO: 'FIXED' }
+  if (!d) return
+  const intMap = {
+    NONE: 'NONE', PERCENTAGE: 'PERCENTAGE', FIXED: 'FIXED',
+    NINGUNO: 'NONE', PORCENTAJE: 'PERCENTAGE', FIJO: 'FIXED'
+  }
   Object.assign(f, {
     loan_id:          d.id || d.loan_id      || '',
     borrower_name:    d.borrower_name        || '',
     concept:          d.concept              || '',
-    account_id:       d.account_id           || '',
+    account_id:       d.account_id ? String(d.account_id) : '',
     loan_date:        d.loan_date            || today,
     due_date:         d.due_date             || '',
-    principal_amount: d.principal_amount     || '',
+    principal_amount: d.principal_amount     ?? '',
     interest_type:    intMap[d.interest_type] ?? 'NONE',
-    interest_value:   d.interest_value       || '',
+    interest_value:   d.interest_value       ?? '',
     status:           d.status               || 'PENDIENTE',
     notes:            d.notes               || '',
   })
 }
 
 function getFormData() {
-  if (!f.borrower_name || !f.concept || !f.account_id || !f.principal_amount || !f.loan_date) {
+  const principal = parseFloat(f.principal_amount)
+  if (!f.borrower_name.trim() || !f.concept.trim() || !f.account_id || isNaN(principal) || principal <= 0 || !f.loan_date) {
     return null
   }
   const fd = new FormData()
-  // editLoan.php and createLoan.php both use the same plain field names
-  if (f.loan_id)         fd.append('loan_id',           f.loan_id)
-  fd.append('borrower_name',    f.borrower_name)
-  fd.append('concept',          f.concept)
+  if (f.loan_id) fd.append('loan_id', f.loan_id)
+  fd.append('borrower_name',    f.borrower_name.trim())
+  fd.append('concept',          f.concept.trim())
   fd.append('account_id',       f.account_id)
   fd.append('loan_date',        f.loan_date)
-  if (f.due_date)        fd.append('due_date',           f.due_date)
-  fd.append('principal_amount', f.principal_amount)
-  fd.append('interest_type',    f.interest_type)       // already English: NONE/PERCENTAGE/FIXED
-  if (f.interest_value)  fd.append('interest_value',    f.interest_value)
+  fd.append('due_date',         f.due_date || '')
+  fd.append('principal_amount', principal.toFixed(2))
+  fd.append('interest_type',    f.interest_type)
+  if (f.interest_type !== 'NONE' && f.interest_value !== '') {
+    fd.append('interest_value', f.interest_value)
+  }
   fd.append('total_receivable', totalReceivable.value)
-  if (f.loan_id)         fd.append('status',            f.status)
-  fd.append('notes',            f.notes)
+  if (f.loan_id) fd.append('status', f.status)
+  fd.append('notes',            f.notes || '')
   return fd
 }
 

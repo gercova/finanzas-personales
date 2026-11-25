@@ -26,19 +26,24 @@ if ($interest_type === 'PORCENTAJE') $interest_type = 'PERCENTAGE';
 if ($interest_type === 'FIJO') $interest_type = 'FIXED';
 if (!in_array($status, $validStatuses)) $status = 'PENDIENTE';
 
-if ($loan_id <= 0 || empty($borrower_name) || $account_id <= 0 || $principal_amount <= 0 || empty($loan_date)) {
+if ($loan_id <= 0 || empty($borrower_name) || empty($concept) || $account_id <= 0 || $principal_amount <= 0 || empty($loan_date)) {
     echo json_encode(['success'=>false,'messages'=>'Datos incompletos o inválidos.']);
     exit;
 }
 
 // Ownership check + get old data
-$stmtOld = $connect->prepare("SELECT principal_amount, account_id, amount_repaid FROM loans WHERE loan_id=? AND created_by=?");
+$stmtOld = $connect->prepare("SELECT principal_amount, account_id, amount_repaid FROM loans WHERE loan_id=? AND created_by=? AND is_deleted=0");
 if (!$stmtOld) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
 $stmtOld->bind_param("ii", $loan_id, $userId);
 $stmtOld->execute();
 $old = $stmtOld->get_result()->fetch_assoc();
 $stmtOld->close();
 if (!$old) { echo json_encode(['success'=>false,'messages'=>'Registro no encontrado.']); exit; }
+
+if (!verifyOwnedEntity($connect, 'accounts', 'account_id', $account_id, $userId)) {
+    echo json_encode(['success'=>false,'messages'=>'Cuenta no válida o sin permiso.']);
+    exit;
+}
 
 // Recalculate
 if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
@@ -50,19 +55,23 @@ if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
     $interest_value = null;
 }
 $balance_pending = max(0, $total_receivable - (float)$old['amount_repaid']);
+if ($status === 'PAGADO') {
+    $balance_pending = 0.00;
+}
 
 $stmt = $connect->prepare(
     "UPDATE loans SET borrower_name=?, concept=?, account_id=?, loan_date=?, due_date=?, principal_amount=?, interest_type=?, interest_value=?, total_receivable=?, balance_pending=?, status=?, notes=?
-     WHERE loan_id=? AND created_by=?"
+     WHERE loan_id=? AND created_by=? AND is_deleted=0"
 );
 if (!$stmt) { echo json_encode(['success'=>false,'messages'=>'Error preparando consulta: ' . $connect->error]); exit; }
-$stmt->bind_param("ssissdsddssii",
+$stmt->bind_param("ssissdsdddssii",
     $borrower_name, $concept, $account_id, $loan_date, $due_date,
     $principal_amount, $interest_type, $interest_value,
     $total_receivable, $balance_pending, $status, $notes,
     $loan_id, $userId
 );
 
+// Account balance sync is handled automatically by trg_loans_after_update
 if ($stmt->execute()) {
     echo json_encode(['success'=>true,'messages'=>'Préstamo actualizado exitosamente.']);
 } else {

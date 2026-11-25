@@ -20,7 +20,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Presupuesto S/. <span class="text-danger">*</span></label>
-          <input v-model="f.budget" type="number" step="0.01" min="0"
+          <input v-model="f.budget" type="number" step="0.01" min="0.01"
                  class="form-control" placeholder="0.00" required>
         </div>
       </div>
@@ -65,11 +65,12 @@ const f = reactive({
 })
 
 function setData(d) {
+  if (!d) return
   Object.assign(f, {
     project_id:   d.project_id   || '',
     project_name: d.project_name || '',
     client_name:  d.client_name  || '',
-    budget:       d.budget       || '',
+    budget:       d.budget       ?? '',
     start_date:   d.start_date   || '',
     end_date:     d.end_date     || '',
     status:       d.status       || 'ACTIVE',
@@ -78,30 +79,29 @@ function setData(d) {
 }
 
 function getFormData() {
-  if (!f.project_name || !f.budget) return null
+  const b = parseFloat(f.budget)
+  if (!f.project_name.trim() || isNaN(b) || b <= 0) return null
 
   const fd     = new FormData()
   const isEdit = !!f.project_id
 
   if (isEdit) {
-    // editProject.php expects every field prefixed with "edit_"
     fd.append('edit_project_id',   f.project_id)
-    fd.append('edit_project_name', f.project_name)
-    fd.append('edit_client_name',  f.client_name)
-    fd.append('edit_budget',       f.budget)
-    fd.append('edit_start_date',   f.start_date)
-    fd.append('edit_end_date',     f.end_date)
+    fd.append('edit_project_name', f.project_name.trim())
+    fd.append('edit_client_name',  f.client_name || '')
+    fd.append('edit_budget',       b.toFixed(2))
+    fd.append('edit_start_date',   f.start_date || '')
+    fd.append('edit_end_date',     f.end_date || '')
     fd.append('edit_status',       f.status)
-    fd.append('edit_description',  f.description)
+    fd.append('edit_description',  f.description || '')
   } else {
-    // createProject.php expects plain field names
-    fd.append('project_name', f.project_name)
-    fd.append('client_name',  f.client_name)
-    fd.append('budget',       f.budget)
-    fd.append('start_date',   f.start_date)
-    fd.append('end_date',     f.end_date)
+    fd.append('project_name', f.project_name.trim())
+    fd.append('client_name',  f.client_name || '')
+    fd.append('budget',       b.toFixed(2))
+    fd.append('start_date',   f.start_date || '')
+    fd.append('end_date',     f.end_date || '')
     fd.append('status',       f.status)
-    fd.append('description',  f.description)
+    fd.append('description',  f.description || '')
   }
 
   return fd

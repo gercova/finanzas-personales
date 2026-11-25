@@ -24,10 +24,11 @@
 			exit();
 		}
 
-		$sql = "UPDATE product SET product_name = ?, brand_id = ?, categories_id = ?, quantity = ?, rate = ?, active = ?, status = 1 WHERE product_id = ?";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "UPDATE product SET product_name = ?, brand_id = ?, categories_id = ?, quantity = ?, rate = ?, active = ?, status = 1 WHERE product_id = ? AND (created_by = ? OR created_by IS NULL) AND is_deleted = 0";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("siiddii", $productName, $brandName, $categoryName, $quantity, $rate, $productStatus, $productId);
+			$stmt->bind_param("siiddiii", $productName, $brandName, $categoryName, $quantity, $rate, $productStatus, $productId, $userId);
 			if($stmt->execute()){
 				$valid['success'] = true;
 				$valid['messages'] = "Producto actualizado exitosamente.";	

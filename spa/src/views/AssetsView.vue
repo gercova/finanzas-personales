@@ -83,21 +83,24 @@
       </template>
     </AppModal>
 
-    <ImportModal ref="importRef" module="asset" @imported="store.reload()" />
+    <ImportModal ref="importRef" module="asset" @imported="onMutated" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAssetStore } from '@/stores/useAssetStore'
+import { useReportStore } from '@/stores/useReportStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
 import AssetForm   from '@/components/forms/AssetForm.vue'
 import * as api    from '@/api'
 
-const toast    = inject('toast')
-const store    = useAssetStore()
+const toast       = inject('toast')
+const store       = useAssetStore()
+const reportStore = useReportStore()
+
 const showAdd  = ref(false)
 const showEdit = ref(false)
 const saving   = ref(false)
@@ -131,13 +134,18 @@ function fmt(n) {
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
+async function onMutated() {
+  reportStore.invalidate()
+  await store.reload()
+}
+
 async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete el nombre, categoría y un valor estimado mayor a 0.'; return }
     const { data } = await api.createAsset(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -147,9 +155,9 @@ async function submitEdit() {
   saving.value = true; formError.value = ''
   try {
     const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete el nombre, categoría y un valor estimado mayor a 0.'; return }
     const { data } = await api.editAsset(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -166,9 +174,13 @@ async function handleTableAction(e) {
     const id = parseInt(editMatch[1])
     const { data } = await api.getAssetData(id)
     if (data) {
+      resetForm()
       editId.value = id
       showEdit.value = true
-      setTimeout(() => editFormRef.value?.setData(data), 50)
+      await nextTick()
+      editFormRef.value?.setData(data)
+    } else {
+      toast.danger('No se pudo cargar el activo.')
     }
   }
 
@@ -177,7 +189,7 @@ async function handleTableAction(e) {
     e.preventDefault()
     if (!confirm('¿Eliminar este activo?')) return
     const { data } = await api.removeAsset(parseInt(removeMatch[1]))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
+    if (data.success) { await onMutated(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 }

@@ -5,26 +5,26 @@ header('Content-Type: application/json');
 
 verifyCsrfToken();
 
-$loan_id               = (int)($_POST['loan_id']                ?? 0);
+$loan_id                = (int)($_POST['loan_id']                ?? 0);
 $destination_account_id = (int)($_POST['destination_account_id'] ?? 0);
-$payment_date          = cleanInput($_POST['payment_date']       ?? '');
-$amount                = (float)($_POST['amount']                ?? 0);
-$notes                 = cleanInput($_POST['notes']              ?? '');
-$userId                = (int)$_SESSION['userId'];
+$payment_date           = cleanInput($_POST['payment_date']       ?? '');
+$amount                 = (float)($_POST['amount']                ?? 0);
+$notes                  = cleanInput($_POST['notes']              ?? '');
+$userId                 = (int)$_SESSION['userId'];
 
 if ($loan_id <= 0 || $destination_account_id <= 0 || $amount <= 0 || empty($payment_date)) {
     echo json_encode(['success'=>false,'messages'=>'Datos incompletos o inválidos.']);
     exit;
 }
 
-// Verify loan ownership
-$stmtLoan = $connect->prepare("SELECT total_receivable, amount_repaid, balance_pending, status FROM loans WHERE loan_id=? AND created_by=?");
-if (!$stmtLoan) { echo json_encode(['success'=>false,'messages'=>'Error interno.']); exit; }
-$stmtLoan->bind_param("ii", $loan_id, $userId);
-$stmtLoan->execute();
-$loan = $stmtLoan->get_result()->fetch_assoc();
-$stmtLoan->close();
-if (!$loan) { echo json_encode(['success'=>false,'messages'=>'Préstamo no encontrado.']); exit; }
+if (!verifyOwnedEntity($connect, 'loans', 'loan_id', $loan_id, $userId)) {
+    echo json_encode(['success'=>false,'messages'=>'Préstamo no encontrado o sin permiso.']);
+    exit;
+}
+if (!verifyOwnedEntity($connect, 'accounts', 'account_id', $destination_account_id, $userId)) {
+    echo json_encode(['success'=>false,'messages'=>'Cuenta destino no válida o sin permiso.']);
+    exit;
+}
 
 // Handle receipt upload
 $receipt_image = null;
@@ -37,38 +37,27 @@ if (!empty($_FILES['receipt_image']['name'])) {
         $ext = pathinfo($_FILES['receipt_image']['name'], PATHINFO_EXTENSION);
         $filename = bin2hex(random_bytes(16)) . '.' . strtolower($ext);
         $uploadDir = __DIR__ . '/../assests/images/receipts/';
-        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
-        if (move_uploaded_file($_FILES['receipt_image']['tmp_name'], $uploadDir . $filename)) {
+        if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+        if (is_writable($uploadDir) && @move_uploaded_file($_FILES['receipt_image']['tmp_name'], $uploadDir . $filename)) {
             $receipt_image = 'assests/images/receipts/' . $filename;
         }
     }
 }
 
-// Insert payment record
-$stmtPay = $connect->prepare(
-    "INSERT INTO loan_payments (loan_id, destination_account_id, payment_date, amount, receipt_image, notes)
-     VALUES (?, ?, ?, ?, ?, ?)"
+// Atomic Stored Procedure handles insertion + trigger updates loan totals & destination account balance
+$sets = callProcedureMulti(
+    $connect,
+    "CALL sp_record_loan_payment(?, ?, ?, ?, ?, ?, ?)",
+    "iiisdss",
+    [$userId, $loan_id, $destination_account_id, $payment_date, $amount, $receipt_image, $notes]
 );
-if (!$stmtPay) { echo json_encode(['success'=>false,'messages'=>'Error preparando pago: ' . $connect->error]); exit; }
-$stmtPay->bind_param("iisdss", $loan_id, $destination_account_id, $payment_date, $amount, $receipt_image, $notes);
-$stmtPay->execute();
-$stmtPay->close();
 
-// Update loan totals
-$newRepaid  = (float)$loan['amount_repaid'] + $amount;
-$newPending = max(0, (float)$loan['total_receivable'] - $newRepaid);
-$newStatus  = $newPending <= 0 ? 'PAGADO' : ($newRepaid > 0 ? 'PARCIAL' : 'PENDIENTE');
-
-$stmtUp = $connect->prepare(
-    "UPDATE loans SET amount_repaid=?, balance_pending=?, status=? WHERE loan_id=?"
-);
-if (!$stmtUp) { echo json_encode(['success'=>false,'messages'=>'Error actualizando préstamo: ' . $connect->error]); exit; }
-$stmtUp->bind_param("ddsi", $newRepaid, $newPending, $newStatus, $loan_id);
-$stmtUp->execute();
-$stmtUp->close();
-
-// Credit destination account
-$stmtAcc = $connect->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
-if ($stmtAcc) { $stmtAcc->bind_param("di", $amount, $destination_account_id); $stmtAcc->execute(); $stmtAcc->close(); }
-
-echo json_encode(['success'=>true,'messages'=>'Pago registrado exitosamente. Estado: '.$newStatus]);
+if (!empty($sets[0][0])) {
+    $res = $sets[0][0];
+    echo json_encode([
+        'success'  => (int)$res['success'] === 1,
+        'messages' => $res['messages']
+    ]);
+} else {
+    echo json_encode(['success' => false, 'messages' => 'Error al registrar el pago del préstamo.']);
+}

@@ -103,9 +103,12 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onUnmounted } from 'vue'
+import { ref, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { useFinCategoryStore } from '@/stores/useFinCategoryStore'
+import { useDashboardStore } from '@/stores/useDashboardStore'
+import { useReportStore } from '@/stores/useReportStore'
+import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
 import DataTable from '@/components/DataTable.vue'
 import AppModal  from '@/components/AppModal.vue'
 import AccountForm from '@/components/forms/AccountForm.vue'
@@ -115,6 +118,9 @@ import * as api from '@/api'
 const toast            = inject('toast')
 const accountStore     = useAccountStore()
 const finCategoryStore = useFinCategoryStore()
+const dashboardStore   = useDashboardStore()
+const reportStore      = useReportStore()
+const optionsStore     = useFormOptionsStore()
 
 // Account Modal State
 const showAddAccount     = ref(false)
@@ -140,6 +146,16 @@ function resetAccountForm() { accountFormError.value = '' }
 function openAddCategory()   { resetCategoryForm(); showAddCategory.value = true }
 function resetCategoryForm() { categoryFormError.value = '' }
 
+async function onAccountMutated() {
+  dashboardStore.invalidate()
+  reportStore.invalidate()
+  await Promise.all([accountStore.reload(), optionsStore.reload()])
+}
+
+async function onCategoryMutated() {
+  await Promise.all([finCategoryStore.reload(), optionsStore.reload()])
+}
+
 async function submitAddAccount() {
   savingAccount.value = true
   accountFormError.value = ''
@@ -149,7 +165,7 @@ async function submitAddAccount() {
     const { data } = await api.createAccount(fd)
     if (data.success) {
       showAddAccount.value = false
-      await accountStore.reload()
+      await onAccountMutated()
       toast.success(data.messages)
     } else {
       accountFormError.value = data.messages
@@ -170,7 +186,7 @@ async function submitEditAccount() {
     const { data } = await api.editAccount(fd)
     if (data.success) {
       showEditAccount.value = false
-      await accountStore.reload()
+      await onAccountMutated()
       toast.success(data.messages)
     } else {
       accountFormError.value = data.messages
@@ -191,7 +207,7 @@ async function submitAddCategory() {
     const { data } = await api.createFinCategory(fd)
     if (data.success) {
       showAddCategory.value = false
-      await finCategoryStore.reload()
+      await onCategoryMutated()
       toast.success(data.messages)
     } else {
       categoryFormError.value = data.messages
@@ -212,7 +228,7 @@ async function submitEditCategory() {
     const { data } = await api.editFinCategory(fd)
     if (data.success) {
       showEditCategory.value = false
-      await finCategoryStore.reload()
+      await onCategoryMutated()
       toast.success(data.messages)
     } else {
       categoryFormError.value = data.messages
@@ -228,15 +244,18 @@ async function handleTableAction(e) {
   const el = e.target.closest('a')
   if (!el) return
 
-  // Accounts
   if (el.classList.contains('edit-account')) {
     e.preventDefault()
     const id = parseInt(el.dataset.id)
     const { data } = await api.getAccountData(id)
     if (data.success) {
+      resetAccountForm()
       editAccountId.value = id
       showEditAccount.value = true
-      setTimeout(() => editAccountFormRef.value?.setData(data.data), 50)
+      await nextTick()
+      editAccountFormRef.value?.setData(data.data)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar la cuenta.')
     }
   }
   if (el.classList.contains('remove-account')) {
@@ -244,22 +263,25 @@ async function handleTableAction(e) {
     if (!confirm('¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta.')) return
     const { data } = await api.removeAccount(parseInt(el.dataset.id))
     if (data.success) {
-      await accountStore.reload()
+      await onAccountMutated()
       toast.success(data.messages)
     } else {
       toast.danger(data.messages)
     }
   }
 
-  // Financial Categories
   if (el.classList.contains('edit-fin-category')) {
     e.preventDefault()
     const id = parseInt(el.dataset.id)
     const { data } = await api.getFinCategoryData(id)
     if (data.success) {
+      resetCategoryForm()
       editCategoryId.value = id
       showEditCategory.value = true
-      setTimeout(() => editCategoryFormRef.value?.setData(data.data), 50)
+      await nextTick()
+      editCategoryFormRef.value?.setData(data.data)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar la categoría.')
     }
   }
   if (el.classList.contains('remove-fin-category')) {
@@ -267,7 +289,7 @@ async function handleTableAction(e) {
     if (!confirm('¿Eliminar esta categoría? Los movimientos existentes conservarán su historial.')) return
     const { data } = await api.removeFinCategory(parseInt(el.dataset.id))
     if (data.success) {
-      await finCategoryStore.reload()
+      await onCategoryMutated()
       toast.success(data.messages)
     } else {
       toast.danger(data.messages)

@@ -28,6 +28,11 @@ if (empty($borrower_name) || empty($concept) || $account_id <= 0 || $principal_a
     exit;
 }
 
+if (!verifyOwnedEntity($connect, 'accounts', 'account_id', $account_id, $userId)) {
+    echo json_encode(['success' => false, 'messages' => 'Cuenta no válida o sin permiso.']);
+    exit;
+}
+
 // Recalculate total_receivable server-side
 if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
     $total_receivable = $principal_amount + ($principal_amount * $interest_value / 100);
@@ -54,10 +59,8 @@ $stmt->bind_param("ssissdsdddsi",
     $total_receivable, $balance_pending, $notes, $userId
 );
 
+// Account balance deduction is handled automatically by trg_loans_after_insert
 if ($stmt->execute()) {
-    // Deduct from account (money lent out)
-    $s = $connect->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
-    if ($s) { $s->bind_param("di", $principal_amount, $account_id); $s->execute(); $s->close(); }
     echo json_encode(['success' => true, 'messages' => 'Préstamo registrado exitosamente.']);
 } else {
     echo json_encode(['success' => false, 'messages' => 'Error al guardar: ' . $connect->error]);

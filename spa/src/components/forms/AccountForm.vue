@@ -48,8 +48,9 @@
     <div class="row">
       <div class="col-sm-6">
         <div class="form-group">
-          <label>Saldo Inicial (S/.) <span class="text-danger">*</span></label>
-          <input v-model="f.initial_balance" type="number" step="0.01" class="form-control" placeholder="0.00" required>
+          <label>Saldo Inicial (S/.) <span v-if="!editId" class="text-danger">*</span></label>
+          <input v-model="f.initial_balance" type="number" step="0.01" class="form-control" placeholder="0.00" :disabled="!!editId" :required="!editId">
+          <small v-if="editId" class="text-muted">El saldo inicial solo se define al crear la cuenta.</small>
         </div>
       </div>
       <div class="col-sm-6">
@@ -69,9 +70,14 @@
 import { reactive } from 'vue'
 defineProps({ editId: { type: Number, default: null } })
 
-const f = reactive({ account_id:'', account_name:'', account_type:'', account_number:'', currency:'PEN', color:'#2e6da4', initial_balance:'0', status:'1' })
+const f = reactive({
+  account_id: '', account_name: '', account_type: '',
+  account_number: '', currency: 'PEN', color: '#2e6da4',
+  initial_balance: '0', status: '1'
+})
 
 function setData(d) {
+  if (!d) return
   Object.assign(f, {
     account_id:      d.id || d.account_id || '',
     account_name:    d.account_name || '',
@@ -79,15 +85,22 @@ function setData(d) {
     account_number:  d.account_number || '',
     currency:        d.currency || 'PEN',
     color:           d.color || '#2e6da4',
-    initial_balance: d.initial_balance || '0',
+    initial_balance: d.initial_balance ?? '0',
     status:          String(d.status ?? '1'),
   })
 }
 
 function getFormData() {
-  if (!f.account_name || !f.account_type) return null
+  if (!f.account_name.trim() || !f.account_type) return null
   const fd = new FormData()
-  Object.entries(f).forEach(([k, v]) => v !== '' && v !== null && fd.append(k, v))
+  if (f.account_id) fd.append('account_id', f.account_id)
+  fd.append('account_name',    f.account_name.trim())
+  fd.append('account_type',    f.account_type)
+  fd.append('account_number',  f.account_number || '')
+  fd.append('currency',        f.currency)
+  fd.append('color',           f.color)
+  if (!f.account_id) fd.append('initial_balance', f.initial_balance || '0')
+  fd.append('status',          f.status)
   return fd
 }
 

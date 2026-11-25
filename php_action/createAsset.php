@@ -48,9 +48,14 @@ if (isset($_FILES['asset_image']) && $_FILES['asset_image']['error'] === UPLOAD_
         echo json_encode($valid); exit();
     }
     $newName  = bin2hex(random_bytes(16)) . '.' . $ext;
-    $destPath = '../assests/images/assets/' . $newName;
-    if (is_uploaded_file($tmpFile) && move_uploaded_file($tmpFile, $destPath)) {
+    $uploadDir = '../assests/images/assets/';
+    if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+    $destPath = $uploadDir . $newName;
+    if (is_writable($uploadDir) && is_uploaded_file($tmpFile) && @move_uploaded_file($tmpFile, $destPath)) {
         $imagePath = 'assests/images/assets/' . $newName;
+    } else {
+        $valid['messages'] = 'No se pudo guardar la imagen del activo (verifique permisos de carpeta).';
+        echo json_encode($valid); exit();
     }
 }
 
@@ -59,7 +64,7 @@ $purchasePrice= $purchasePrice > 0 ? $purchasePrice : null;
 
 $stmt = $connect->prepare("INSERT INTO assets (asset_name, category, estimated_value, purchase_date, purchase_price, document_number, location_or_custody, status, image_path, notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
 if ($stmt) {
-    $stmt->bind_param("ssddsssssi", $assetName, $category, $estimatedVal, $purchaseDate, $purchasePrice, $docNumber, $location, $status, $imagePath, $notes, $userId);
+    $stmt->bind_param("ssdsdsssssi", $assetName, $category, $estimatedVal, $purchaseDate, $purchasePrice, $docNumber, $location, $status, $imagePath, $notes, $userId);
     if ($stmt->execute()) {
         $valid['success']  = true;
         $valid['messages'] = 'Activo registrado exitosamente.';

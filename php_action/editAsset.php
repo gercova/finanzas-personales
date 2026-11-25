@@ -34,7 +34,7 @@ if (!in_array($category, $allowedCats) || !in_array($status, $allowedStatuses)) 
 }
 
 // Verify ownership
-$chk = $connect->prepare("SELECT asset_id, image_path FROM assets WHERE asset_id = ? AND created_by = ?");
+$chk = $connect->prepare("SELECT asset_id, image_path FROM assets WHERE asset_id = ? AND created_by = ? AND is_deleted = 0");
 $chk->bind_param("ii", $assetId, $userId);
 $chk->execute();
 $existing = $chk->get_result()->fetch_assoc();
@@ -57,13 +57,18 @@ if (isset($_FILES['edit_asset_image']) && $_FILES['edit_asset_image']['error'] =
     $allowedMimes= ['image/jpeg','image/png','image/gif'];
     if (in_array($ext, $allowedExts) && in_array($mime, $allowedMimes)) {
         $newName = bin2hex(random_bytes(16)) . '.' . $ext;
-        $dest    = '../assests/images/assets/' . $newName;
-        if (is_uploaded_file($tmpFile) && move_uploaded_file($tmpFile, $dest)) {
+        $uploadDir = '../assests/images/assets/';
+        if (!is_dir($uploadDir)) @mkdir($uploadDir, 0755, true);
+        $dest    = $uploadDir . $newName;
+        if (is_writable($uploadDir) && is_uploaded_file($tmpFile) && @move_uploaded_file($tmpFile, $dest)) {
             // Remove old file
             if (!empty($existing['image_path']) && file_exists('../' . $existing['image_path'])) {
                 @unlink('../' . $existing['image_path']);
             }
             $imagePath = 'assests/images/assets/' . $newName;
+        } else {
+            $valid['messages'] = 'No se pudo guardar la imagen del activo (verifique permisos de carpeta).';
+            echo json_encode($valid); exit();
         }
     }
 }
@@ -71,9 +76,9 @@ if (isset($_FILES['edit_asset_image']) && $_FILES['edit_asset_image']['error'] =
 $purDate  = !empty($purDate)  ? $purDate  : null;
 $purPrice = $purPrice > 0     ? $purPrice : null;
 
-$stmt = $connect->prepare("UPDATE assets SET asset_name=?, category=?, estimated_value=?, purchase_date=?, purchase_price=?, document_number=?, location_or_custody=?, status=?, image_path=?, notes=? WHERE asset_id=? AND created_by=?");
+$stmt = $connect->prepare("UPDATE assets SET asset_name=?, category=?, estimated_value=?, purchase_date=?, purchase_price=?, document_number=?, location_or_custody=?, status=?, image_path=?, notes=? WHERE asset_id=? AND created_by=? AND is_deleted=0");
 if ($stmt) {
-    $stmt->bind_param("ssddssssssii", $assetName, $category, $estVal, $purDate, $purPrice, $docNum, $location, $status, $imagePath, $notes, $assetId, $userId);
+    $stmt->bind_param("ssdsdsssssii", $assetName, $category, $estVal, $purDate, $purPrice, $docNum, $location, $status, $imagePath, $notes, $assetId, $userId);
     if ($stmt->execute()) {
         $valid['success']  = true;
         $valid['messages'] = 'Activo actualizado exitosamente.';

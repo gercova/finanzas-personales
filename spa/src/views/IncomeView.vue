@@ -90,21 +90,30 @@
       </template>
     </AppModal>
 
-    <ImportModal ref="importRef" module="income" @imported="store.reload()" />
+    <ImportModal ref="importRef" module="income" @imported="onMutated" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
 import { useIncomeStore } from '@/stores/useIncomeStore'
+import { useDashboardStore } from '@/stores/useDashboardStore'
+import { useReportStore } from '@/stores/useReportStore'
+import { useAccountStore } from '@/stores/useAccountStore'
+import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
 import IncomeForm  from '@/components/forms/IncomeForm.vue'
 import * as api    from '@/api'
 
-const toast    = inject('toast')
-const store    = useIncomeStore()
+const toast          = inject('toast')
+const store          = useIncomeStore()
+const dashboardStore = useDashboardStore()
+const reportStore    = useReportStore()
+const accountStore   = useAccountStore()
+const optionsStore   = useFormOptionsStore()
+
 const showAdd  = ref(false)
 const showEdit = ref(false)
 const saving   = ref(false)
@@ -114,11 +123,11 @@ const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
 
-const accounts   = ref(window.incomeAccounts   || [])
-const categories = ref(window.incomeCategories || [])
-const projects   = ref(window.incomeProjects   || [])
+const accounts   = computed(() => optionsStore.accounts)
+const categories = computed(() => optionsStore.incomeCategories)
+const projects   = computed(() => optionsStore.projects)
 
-const today     = new Date()
+const today      = new Date()
 const monthLabel = today.toLocaleString('es', { month: 'long', year: 'numeric' })
 
 const stats = computed(() => {
@@ -148,13 +157,20 @@ function fmt(n) {
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
+async function onMutated() {
+  dashboardStore.invalidate()
+  reportStore.invalidate()
+  accountStore.invalidate()
+  await store.reload()
+}
+
 async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el monto sea mayor a 0.'; return }
     const { data } = await api.createIncome(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -164,9 +180,9 @@ async function submitEdit() {
   saving.value = true; formError.value = ''
   try {
     const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el monto sea mayor a 0.'; return }
     const { data } = await api.editIncome(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
+    if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
@@ -181,9 +197,13 @@ async function handleTableAction(e) {
     const id = parseInt(el.dataset.id)
     const { data } = await api.getIncomeData(id)
     if (data.success) {
+      resetForm()
       editId.value = id
       showEdit.value = true
-      setTimeout(() => editFormRef.value?.setData(data.data), 50)
+      await nextTick()
+      editFormRef.value?.setData(data.data)
+    } else {
+      toast.danger(data.messages || 'No se pudo cargar el ingreso.')
     }
   }
 
@@ -191,17 +211,16 @@ async function handleTableAction(e) {
     e.preventDefault()
     if (!confirm('¿Eliminar este ingreso? Esta acción no se puede deshacer.')) return
     const { data } = await api.removeIncome(parseInt(el.dataset.id))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
+    if (data.success) { await onMutated(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 }
 
 onMounted(async () => {
-  await store.load()
+  await Promise.all([store.load(), optionsStore.load()])
   document.addEventListener('click', handleTableAction)
 })
 
-// Clean up the listener when navigating away — prevents duplicate handlers
 onUnmounted(() => {
   document.removeEventListener('click', handleTableAction)
 })

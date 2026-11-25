@@ -23,6 +23,10 @@
       </div>
     </div>
     <div class="form-group">
+      <label>Comprobante (opcional)</label>
+      <input ref="fileRef" type="file" accept="image/*" class="form-control">
+    </div>
+    <div class="form-group">
       <label>Notas</label>
       <textarea v-model="f.notes" class="form-control" rows="2" placeholder="Observaciones del pago..."></textarea>
     </div>
@@ -33,17 +37,27 @@
 import { reactive, ref } from 'vue'
 defineProps({ accounts: { type: Array, default: () => [] } })
 
-const today  = new Date().toISOString().slice(0, 10)
-const loanId = ref(null)
+const today   = new Date().toISOString().slice(0, 10)
+const loanId  = ref(null)
+const fileRef = ref(null)
 const f = reactive({ destination_account_id: '', amount: '', payment_date: today, notes: '' })
 
-function setLoanId(id) { loanId.value = id }
+function setLoanId(id) {
+  loanId.value = id
+}
+
 function getFormData() {
-  if (!f.destination_account_id || !f.amount || !f.payment_date) return null
+  const amt = parseFloat(f.amount)
+  if (!loanId.value || !f.destination_account_id || isNaN(amt) || amt <= 0 || !f.payment_date) return null
   const fd = new FormData()
   fd.append('loan_id', loanId.value)
-  Object.entries(f).forEach(([k, v]) => fd.append(k, v))
+  fd.append('destination_account_id', f.destination_account_id)
+  fd.append('amount', amt.toFixed(2))
+  fd.append('payment_date', f.payment_date)
+  fd.append('notes', f.notes || '')
+  if (fileRef.value?.files[0]) fd.append('receipt_image', fileRef.value.files[0])
   return fd
 }
+
 defineExpose({ getFormData, setLoanId })
 </script>
