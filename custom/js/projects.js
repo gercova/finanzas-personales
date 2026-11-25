@@ -24,6 +24,8 @@ $(document).ready(function () {
             emptyTable: 'No hay proyectos registrados.'
         }
     });
+    // Expose reload callback for bulk import
+    projectTableReload = function () { projectsTable.ajax.reload(); };
 
     // ── Add Project ───────────────────────────────────────────────────────────
     $('#addProjectForm').on('submit', function (e) {

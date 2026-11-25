@@ -82,9 +82,14 @@ $pageQuotaPctCapped = min($pageQuotaPct, 100);
                 <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
                     <i class="glyphicon glyphicon-arrow-down text-danger" style="margin-right: 8px;"></i> Gestión de Gastos
                 </div>
-                <button class="btn btn-danger" data-toggle="modal" id="addExpenseModalBtn" data-target="#addExpenseModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
-                    <i class="glyphicon glyphicon-plus-sign"></i> Registrar Gasto
-                </button>
+                <div style="display:inline-flex;gap:6px;align-items:center;">
+                    <button class="btn btn-default btn-sm" onclick="openImportModal('expense', function(){ expTableReload && expTableReload(); })" title="Importar desde Excel/CSV">
+                        <i class="glyphicon glyphicon-upload"></i> Importar
+                    </button>
+                    <button class="btn btn-danger" data-toggle="modal" id="addExpenseModalBtn" data-target="#addExpenseModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="glyphicon glyphicon-plus-sign"></i> Registrar Gasto
+                    </button>
+                </div>
             </div><!-- /panel-heading -->
             <div class="panel-body">
                 <div class="remove-messages"></div>
@@ -111,5 +116,8 @@ $pageQuotaPctCapped = min($pageQuotaPct, 100);
     </div><!-- /col -->
 </div><!-- /row -->
 
+<script>var expTableReload = null;</script>
 <script src="custom/js/expense.js"></script>
+<script src="custom/js/bulkImport.js"></script>
+<?php require_once 'modal/importModal.php'; ?>
 <?php require_once 'includes/footer.php'; ?>

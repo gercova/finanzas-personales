@@ -80,9 +80,14 @@ if ($stmtLA) { $stmtLA->bind_param("i", $userId); $stmtLA->execute(); $r=$stmtLA
         <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
           <i class="glyphicon glyphicon-share-alt text-danger" style="margin-right: 8px;"></i> Gestión de Préstamos
         </div>
-        <button class="btn btn-danger" data-toggle="modal" data-target="#addLoanModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
-          <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo
-        </button>
+        <div style="display:inline-flex;gap:6px;align-items:center;">
+          <button class="btn btn-default btn-sm" onclick="openImportModal('loan', function(){ loanTableReload && loanTableReload(); })" title="Importar desde Excel/CSV">
+            <i class="glyphicon glyphicon-upload"></i> Importar
+          </button>
+          <button class="btn btn-danger" data-toggle="modal" data-target="#addLoanModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo
+          </button>
+        </div>
       </div>
       <div class="panel-body">
         <div class="remove-messages"></div>
@@ -115,6 +120,9 @@ if ($stmtLA) { $stmtLA->bind_param("i", $userId); $stmtLA->execute(); $r=$stmtLA
 
 <script>
 var loanAccounts = <?php echo json_encode($loanAccounts); ?>;
+var loanTableReload = null;
 </script>
 <script src="custom/js/loans.js"></script>
+<script src="custom/js/bulkImport.js"></script>
+<?php require_once 'modal/importModal.php'; ?>
 <?php require_once 'includes/footer.php'; ?>

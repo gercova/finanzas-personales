@@ -26,6 +26,8 @@ $(document).ready(function () {
             emptyTable: 'No hay activos registrados.'
         }
     });
+    // Expose reload callback for bulk import
+    assetTableReload = function () { assetsTable.ajax.reload(); };
 
     // ── Image preview – Add form ─────────────────────────────────────────────
     $('#asset_image').on('change', function () {

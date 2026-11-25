@@ -47,6 +47,8 @@ $(document).ready(function () {
             }
         }
     });
+    // Expose reload callback for bulk import
+    expTableReload = function () { expTable.ajax.reload(); };
 
     // ADD - open modal
     $('[data-target="#addExpenseModal"]').on('click', function () {

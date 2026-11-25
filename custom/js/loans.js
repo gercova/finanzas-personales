@@ -91,6 +91,8 @@ $(document).ready(function () {
             }
         }
     });
+    // Expose reload callback for bulk import
+    loanTableReload = function () { loanTable.ajax.reload(); };
 
     // ADD - open
     $('[data-target="#addLoanModal"]').on('click', function() {

@@ -113,9 +113,14 @@ if ($stmtProj) {
         <div class="page-heading" style="margin: 0; font-size: 16px; font-weight: 600; display: flex; align-items: center;">
           <i class="glyphicon glyphicon-arrow-up text-success" style="margin-right: 8px;"></i> Gestión de Ingresos
         </div>
-        <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
-          <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
-        </button>
+        <div style="display:inline-flex;gap:6px;align-items:center;">
+          <button class="btn btn-default btn-sm" onclick="openImportModal('income', function(){ incomeTableReload && incomeTableReload(); })" title="Importar desde Excel/CSV">
+            <i class="glyphicon glyphicon-upload"></i> Importar
+          </button>
+          <button class="btn btn-success" data-toggle="modal" data-target="#addIncomeModal" style="margin: 0; display: inline-flex; align-items: center; gap: 5px;">
+            <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
+          </button>
+        </div>
       </div>
       <div class="panel-body">
         <div class="remove-messages"></div>
@@ -146,6 +151,9 @@ if ($stmtProj) {
 var incomeAccounts    = <?php echo json_encode($accounts); ?>;
 var incomeCategories  = <?php echo json_encode($finCategories); ?>;
 var incomeProjects    = <?php echo json_encode($projects); ?>;
+var incomeTableReload = null; // set by income.js after DataTable init
 </script>
 <script src="custom/js/income.js"></script>
+<script src="custom/js/bulkImport.js"></script>
+<?php require_once 'modal/importModal.php'; ?>
 <?php require_once 'includes/footer.php'; ?>

@@ -27,6 +27,7 @@ $(document).ready(function () {
 
     // Init DataTable
     var incomeTable = $('#manageIncomeTable').DataTable({
+
         processing: true,
         ajax: { url: 'php_action/fetchIncomes.php', type: 'GET' },
         columns: [
@@ -51,6 +52,8 @@ $(document).ready(function () {
             }
         }
     });
+    // Expose reload callback for bulk import
+    incomeTableReload = function () { incomeTable.ajax.reload(); };
 
     // ADD - open modal
     $('[data-target="#addIncomeModal"]').on('click', function () {
