@@ -23,15 +23,16 @@ Options -Indexes
 
 # ── Vue 3 SPA history-mode routing ──────────────────────────────────────────
 # All requests under /app/* are rewritten to app.php (the SPA shell).
-# PHP API endpoints and static assets are served directly.
+# PHP API endpoints, static files, and real directories are served directly.
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Let real files and directories through (PHP files, assets, images, etc.)
+    # Pass real files and directories straight through
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Rewrite /app/* (Vue history routes) to the SPA shell
+    # Rewrite every /app/* deep-link to the SPA shell
+    # This covers /app/, /app/income, /app/loans, etc.
     RewriteRule ^app(/.*)?$ app.php [L,QSA]
 </IfModule>

@@ -1,6 +1,5 @@
 <template>
   <div>
-    <!-- Breadcrumb -->
     <ol class="breadcrumb">
       <li><a href="#" @click.prevent="$router.push('/dashboard')">Inicio</a></li>
       <li class="active">Ingresos</li>
@@ -61,12 +60,14 @@
               header-color="#27ae60" size="lg" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <IncomeForm ref="addFormRef" :accounts="accounts" :categories="categories" :projects="projects" />
+        <IncomeForm ref="addFormRef"
+          :accounts="accounts" :categories="categories" :projects="projects" />
       </template>
       <template #footer>
         <button class="btn btn-default" @click="showAdd = false">Cancelar</button>
         <button class="btn btn-success" :disabled="saving" @click="submitAdd">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Guardar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Guardar' }}
         </button>
       </template>
     </AppModal>
@@ -76,23 +77,25 @@
               header-color="#2980b9" size="lg" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <IncomeForm ref="editFormRef" :accounts="accounts" :categories="categories" :projects="projects" :edit-id="editId" />
+        <IncomeForm ref="editFormRef"
+          :accounts="accounts" :categories="categories" :projects="projects"
+          :edit-id="editId" />
       </template>
       <template #footer>
         <button class="btn btn-default" @click="showEdit = false">Cancelar</button>
         <button class="btn btn-primary" :disabled="saving" @click="submitEdit">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Actualizar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Actualizar' }}
         </button>
       </template>
     </AppModal>
 
-    <!-- Import -->
     <ImportModal ref="importRef" module="income" @imported="store.reload()" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, inject, onMounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useIncomeStore } from '@/stores/useIncomeStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
@@ -106,61 +109,43 @@ const showAdd  = ref(false)
 const showEdit = ref(false)
 const saving   = ref(false)
 const formError = ref('')
-const editId   = ref(null)
-const importRef  = ref(null)
-const addFormRef = ref(null)
+const editId    = ref(null)
+const importRef   = ref(null)
+const addFormRef  = ref(null)
 const editFormRef = ref(null)
 
-const accounts   = ref([])
-const categories = ref([])
-const projects   = ref([])
+const accounts   = ref(window.incomeAccounts   || [])
+const categories = ref(window.incomeCategories || [])
+const projects   = ref(window.incomeProjects   || [])
 
-const today = new Date()
+const today     = new Date()
 const monthLabel = today.toLocaleString('es', { month: 'long', year: 'numeric' })
 
-// Derive stats from raw rows — raw HTML rows contain amounts in col index 6
 const stats = computed(() => {
   const curMonth = today.toISOString().slice(0, 7)
   const curYear  = String(today.getFullYear())
   let month = 0, year = 0, recurring = 0
   for (const r of store.rows) {
-    const dateStr = String(r[5] || '')     // 'dd/mm/YYYY'
+    const dateStr = String(r[5] || '')
     const amtStr  = String(r[6] || '').replace(/[^0-9.]/g, '')
     const amt     = parseFloat(amtStr) || 0
-    const statusRaw = String(r[7] || '')
-    if (statusRaw.includes('CANCELADO')) continue
-    // Date col is dd/mm/YYYY
+    if (String(r[7] || '').includes('CANCELADO')) continue
     const parts = dateStr.split('/')
     if (parts.length === 3) {
       const ym = `${parts[2]}-${parts[1]}`
       if (ym === curMonth) month += amt
       if (parts[2] === curYear) year += amt
     }
-    // Recurring icon in concept col
     if (String(r[1] || '').includes('glyphicon-repeat')) recurring++
   }
   return { month, year, recurring }
 })
 
-function fmt(n) { return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') }
-
-async function loadLists() {
-  try {
-    // Fetch accounts from inline data PHP set
-    if (window.incomeAccounts)   accounts.value   = window.incomeAccounts
-    if (window.incomeCategories) categories.value = window.incomeCategories
-    if (window.incomeProjects)   projects.value   = window.incomeProjects
-  } catch {}
+function fmt(n) {
+  return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
-onMounted(async () => {
-  await Promise.all([store.load(), loadLists()])
-  // Delegate Bootstrap dropdown clicks to the table (re-triggered by Vue's DOM updates)
-  document.addEventListener('click', handleTableAction)
-})
-
-function openAdd() { resetForm(); showAdd.value = true }
-
+function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
 async function submitAdd() {
@@ -169,11 +154,8 @@ async function submitAdd() {
     const fd = addFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.createIncome(fd)
-    if (data.success) {
-      showAdd.value = false
-      await store.reload()
-      toast.success(data.messages)
-    } else { formError.value = data.messages }
+    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
+    else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
 }
@@ -184,11 +166,8 @@ async function submitEdit() {
     const fd = editFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.editIncome(fd)
-    if (data.success) {
-      showEdit.value = false
-      await store.reload()
-      toast.success(data.messages)
-    } else { formError.value = data.messages }
+    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
+    else formError.value = data.messages
   } catch { formError.value = 'Error de comunicación.' }
   finally { saving.value = false }
 }
@@ -204,7 +183,6 @@ async function handleTableAction(e) {
     if (data.success) {
       editId.value = id
       showEdit.value = true
-      // Let Vue render then populate
       setTimeout(() => editFormRef.value?.setData(data.data), 50)
     }
   }
@@ -212,10 +190,19 @@ async function handleTableAction(e) {
   if (el.classList.contains('remove-income')) {
     e.preventDefault()
     if (!confirm('¿Eliminar este ingreso? Esta acción no se puede deshacer.')) return
-    const id = parseInt(el.dataset.id)
-    const { data } = await api.removeIncome(id)
+    const { data } = await api.removeIncome(parseInt(el.dataset.id))
     if (data.success) { await store.reload(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 }
+
+onMounted(async () => {
+  await store.load()
+  document.addEventListener('click', handleTableAction)
+})
+
+// Clean up the listener when navigating away — prevents duplicate handlers
+onUnmounted(() => {
+  document.removeEventListener('click', handleTableAction)
+})
 </script>

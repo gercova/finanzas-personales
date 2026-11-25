@@ -38,20 +38,33 @@
         <!-- Drop zone -->
         <div class="form-group">
           <label><i class="glyphicon glyphicon-file"></i> Seleccionar archivo Excel o CSV</label>
-          <div class="import-dropzone" :class="{ 'dz-active': dragging, 'dz-error': fileError, 'dz-ok': fileOk }"
-               @click="$refs.fileInput.click()"
+          <div class="import-dropzone"
+               :class="{ 'dz-active': dragging, 'dz-error': !!fileError, 'dz-ok': fileOk }"
+               @click="triggerFileInput"
                @dragover.prevent="dragging = true"
                @dragleave="dragging = false"
                @drop.prevent="onDrop">
-            <i class="glyphicon glyphicon-cloud-upload" style="font-size:36px;color:#aaa;display:block;margin-bottom:8px;"></i>
+            <i class="glyphicon glyphicon-cloud-upload"
+               style="font-size:36px;color:#aaa;display:block;margin-bottom:8px;"></i>
             <span v-if="!selectedFile" style="color:#777;font-size:14px;">
               Arrastre el archivo aquí o <strong>haga clic para seleccionar</strong>
             </span>
-            <span v-else style="color:#333;font-size:14px;font-weight:600;">{{ selectedFile.name }}</span>
-            <input ref="fileInput" type="file" accept=".xlsx,.xls,.csv"
-                   style="position:absolute;width:1px;height:1px;opacity:0;" @change="onFileChange" />
+            <span v-else style="color:#333;font-size:14px;font-weight:600;">
+              {{ selectedFile.name }}
+            </span>
+            <!-- Hidden input — bound via Composition-API ref, not $refs -->
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".xlsx,.xls,.csv"
+              style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;"
+              @change="onFileChange"
+            />
           </div>
-          <div v-if="fileError" class="text-danger" style="margin-top:4px;font-size:12px;">{{ fileError }}</div>
+
+          <div v-if="fileError" class="text-danger" style="margin-top:4px;font-size:12px;">
+            {{ fileError }}
+          </div>
           <div v-if="selectedFile && !fileError" class="text-success" style="margin-top:4px;font-size:12px;">
             <i class="glyphicon glyphicon-ok-sign"></i>
             {{ selectedFile.name }} ({{ fileSizeLabel }})
@@ -61,7 +74,8 @@
         <!-- Progress -->
         <div v-if="uploading" style="margin-top:12px;">
           <div class="progress">
-            <div class="progress-bar progress-bar-striped active" role="progressbar" style="width:100%;min-width:40px;">
+            <div class="progress-bar progress-bar-striped active"
+                 role="progressbar" style="width:100%;min-width:40px;">
               Procesando…
             </div>
           </div>
@@ -70,7 +84,8 @@
 
       <!-- Step 2: results -->
       <div v-else>
-        <div :class="['alert', result.success ? 'alert-success' : 'alert-danger']" style="font-size:14px;">
+        <div :class="['alert', result.success ? 'alert-success' : 'alert-danger']"
+             style="font-size:14px;">
           <strong>
             <i :class="'glyphicon ' + (result.success ? 'glyphicon-ok-sign' : 'glyphicon-remove-sign')"></i>
             {{ result.success ? 'Importación completada' : 'Importación fallida' }}
@@ -78,7 +93,8 @@
           {{ result.messages }}
         </div>
 
-        <div v-if="result.success && result.inserted > 0" class="well well-sm text-center" style="font-size:15px;">
+        <div v-if="result.success && result.inserted > 0"
+             class="well well-sm text-center" style="font-size:15px;">
           <span class="text-success" style="font-weight:700;font-size:22px;">{{ result.inserted }}</span>
           registro(s) importado(s) correctamente.
         </div>
@@ -91,7 +107,11 @@
           <div class="table-responsive" style="max-height:260px;overflow-y:auto;">
             <table class="table table-condensed table-bordered" style="font-size:12px;">
               <thead style="background:#f5f5f5;">
-                <tr><th style="width:60px;">Fila</th><th style="width:120px;">Campo</th><th>Error</th></tr>
+                <tr>
+                  <th style="width:60px;">Fila</th>
+                  <th style="width:120px;">Campo</th>
+                  <th>Error</th>
+                </tr>
               </thead>
               <tbody>
                 <tr v-for="(e, i) in result.errors" :key="i">
@@ -109,7 +129,9 @@
     <template #footer>
       <template v-if="step === 1">
         <button class="btn btn-default" @click="show = false">Cancelar</button>
-        <button class="btn btn-primary" :disabled="!selectedFile || !!fileError || uploading" @click="submit">
+        <button class="btn btn-primary"
+                :disabled="!selectedFile || !!fileError || uploading"
+                @click="submit">
           <i class="glyphicon glyphicon-upload"></i> Importar
         </button>
       </template>
@@ -135,6 +157,9 @@ const props = defineProps({
 })
 const emit = defineEmits(['imported'])
 
+// Composition-API ref for the hidden file input (replaces Options-API $refs)
+const fileInputRef = ref(null)
+
 const show         = ref(false)
 const step         = ref(1)
 const dragging     = ref(false)
@@ -145,17 +170,31 @@ const result       = ref({ success: false, messages: '', inserted: 0, errors: []
 
 const MAX_MB = 5
 
-const moduleLabels = { income: 'Ingresos', expense: 'Gastos', loan: 'Préstamos', project: 'Proyectos', asset: 'Activos Valiosos' }
-const moduleColors = { income: '#27AE60', expense: '#C0392B', loan: '#E74C3C', project: '#2980B9', asset: '#8E44AD' }
+const moduleLabels = {
+  income:  'Ingresos',
+  expense: 'Gastos',
+  loan:    'Préstamos',
+  project: 'Proyectos',
+  asset:   'Activos Valiosos'
+}
+const moduleColors = {
+  income:  '#27AE60',
+  expense: '#C0392B',
+  loan:    '#E74C3C',
+  project: '#2980B9',
+  asset:   '#8E44AD'
+}
 
-const moduleLabel = computed(() => moduleLabels[props.module] || 'Registros')
-const moduleColor = computed(() => moduleColors[props.module] || '#34495E')
+const moduleLabel  = computed(() => moduleLabels[props.module] || 'Registros')
+const moduleColor  = computed(() => moduleColors[props.module] || '#34495E')
 const templateHref = computed(() => api.templateUrl(props.module))
 
 const fileSizeLabel = computed(() => {
   if (!selectedFile.value) return ''
   const s = selectedFile.value.size
-  return s < 1024 * 1024 ? (s / 1024).toFixed(1) + ' KB' : (s / (1024 * 1024)).toFixed(2) + ' MB'
+  return s < 1024 * 1024
+    ? (s / 1024).toFixed(1) + ' KB'
+    : (s / (1024 * 1024)).toFixed(2) + ' MB'
 })
 const fileOk = computed(() => !!selectedFile.value && !fileError.value)
 
@@ -164,17 +203,27 @@ function stepStyle(n) {
   return { background: active ? '#34495e' : '#ecf0f1', color: active ? '#fff' : '#999' }
 }
 
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
 function validateFile(file) {
   if (!file) return
   const ext = file.name.split('.').pop().toLowerCase()
-  if (!['xlsx', 'xls', 'csv'].includes(ext)) { fileError.value = 'Formato no permitido. Use .xlsx, .xls o .csv.'; return }
-  if (file.size > MAX_MB * 1024 * 1024)       { fileError.value = `El archivo supera el máximo de ${MAX_MB} MB.`; return }
+  if (!['xlsx', 'xls', 'csv'].includes(ext)) {
+    fileError.value = 'Formato no permitido. Use .xlsx, .xls o .csv.'
+    return
+  }
+  if (file.size > MAX_MB * 1024 * 1024) {
+    fileError.value = `El archivo supera el máximo de ${MAX_MB} MB.`
+    return
+  }
   fileError.value = ''
   selectedFile.value = file
 }
 
 function onFileChange(e) { validateFile(e.target.files[0]) }
-function onDrop(e) { dragging.value = false; validateFile(e.dataTransfer.files[0]) }
+function onDrop(e)        { dragging.value = false; validateFile(e.dataTransfer.files[0]) }
 
 async function submit() {
   if (!selectedFile.value || fileError.value) return
@@ -187,19 +236,27 @@ async function submit() {
     result.value = data
     step.value = 2
     if (data.success && data.inserted > 0) emit('imported')
-  } catch (e) {
-    result.value = { success: false, messages: 'Error de comunicación con el servidor.', inserted: 0, errors: [] }
+  } catch {
+    result.value = {
+      success: false,
+      messages: 'Error de comunicación con el servidor.',
+      inserted: 0,
+      errors: []
+    }
     step.value = 2
-  } finally { uploading.value = false }
+  } finally {
+    uploading.value = false
+  }
 }
 
 function reset() {
-  step.value = 1
+  step.value     = 1
   selectedFile.value = null
-  fileError.value = ''
-  uploading.value = false
-  result.value = { success: false, messages: '', inserted: 0, errors: [] }
-  if ($refs?.fileInput) $refs.fileInput.value = ''
+  fileError.value    = ''
+  uploading.value    = false
+  result.value       = { success: false, messages: '', inserted: 0, errors: [] }
+  // Use the Composition-API ref — $refs does not exist in <script setup>
+  if (fileInputRef.value) fileInputRef.value.value = ''
 }
 
 function open() { reset(); show.value = true }
@@ -218,7 +275,7 @@ defineExpose({ open })
   background: #fafafa;
   transition: border-color .2s, background .2s;
 }
-.import-dropzone.dz-active  { border-color: #3498db; background: #ebf5fb; }
-.import-dropzone.dz-ok      { border-color: #27ae60; background: #f0fff4; }
-.import-dropzone.dz-error   { border-color: #e74c3c; background: #fdf2f2; }
+.import-dropzone.dz-active { border-color: #3498db; background: #ebf5fb; }
+.import-dropzone.dz-ok     { border-color: #27ae60; background: #f0fff4; }
+.import-dropzone.dz-error  { border-color: #e74c3c; background: #fdf2f2; }
 </style>

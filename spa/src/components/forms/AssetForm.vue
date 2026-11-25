@@ -4,7 +4,8 @@
       <div class="col-sm-8">
         <div class="form-group">
           <label>Nombre del Activo <span class="text-danger">*</span></label>
-          <input v-model="f.asset_name" type="text" class="form-control" placeholder="Ej: Toyota Yaris 2022" required>
+          <input v-model="f.asset_name" type="text" class="form-control"
+                 placeholder="Ej: Toyota Yaris 2022" required>
         </div>
       </div>
       <div class="col-sm-4">
@@ -25,13 +26,15 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Valor Estimado S/. <span class="text-danger">*</span></label>
-          <input v-model="f.estimated_value" type="number" step="0.01" min="0" class="form-control" placeholder="0.00" required>
+          <input v-model="f.estimated_value" type="number" step="0.01" min="0"
+                 class="form-control" placeholder="0.00" required>
         </div>
       </div>
       <div class="col-sm-4">
         <div class="form-group">
           <label>Precio de Compra S/.</label>
-          <input v-model="f.purchase_price" type="number" step="0.01" min="0" class="form-control" placeholder="0.00">
+          <input v-model="f.purchase_price" type="number" step="0.01" min="0"
+                 class="form-control" placeholder="0.00">
         </div>
       </div>
       <div class="col-sm-4">
@@ -45,13 +48,15 @@
       <div class="col-sm-6">
         <div class="form-group">
           <label>N° Documento / Título</label>
-          <input v-model="f.document_number" type="text" class="form-control" placeholder="Placa, Partida, Serie...">
+          <input v-model="f.document_number" type="text" class="form-control"
+                 placeholder="Placa, Partida, Serie...">
         </div>
       </div>
       <div class="col-sm-6">
         <div class="form-group">
           <label>Ubicación / Custodia</label>
-          <input v-model="f.location_or_custody" type="text" class="form-control" placeholder="Dirección, banco custodiante...">
+          <input v-model="f.location_or_custody" type="text" class="form-control"
+                 placeholder="Dirección, banco custodiante...">
         </div>
       </div>
     </div>
@@ -70,9 +75,11 @@
       <div class="col-sm-8">
         <div class="form-group">
           <label>Fotografía del Activo</label>
-          <input ref="fileRef" type="file" class="form-control" accept=".jpg,.jpeg,.png,.gif" @change="onFile">
+          <input ref="fileRef" type="file" class="form-control"
+                 accept=".jpg,.jpeg,.png,.gif" @change="onFile">
           <div v-if="previewSrc" style="margin-top:6px;">
-            <img :src="previewSrc" alt="Vista previa" style="max-height:80px;border-radius:4px;">
+            <img :src="previewSrc" alt="Vista previa"
+                 style="max-height:80px;border-radius:4px;">
           </div>
           <div v-else-if="currentImage" style="margin-top:4px;font-size:12px;" class="text-muted">
             Imagen actual: <a :href="'/' + currentImage" target="_blank">ver</a>
@@ -82,20 +89,27 @@
     </div>
     <div class="form-group">
       <label>Notas</label>
-      <textarea v-model="f.notes" class="form-control" rows="2" placeholder="Observaciones adicionales..."></textarea>
+      <textarea v-model="f.notes" class="form-control" rows="2"
+                placeholder="Observaciones adicionales..."></textarea>
     </div>
   </div>
 </template>
 
 <script setup>
 import { reactive, ref } from 'vue'
+
 defineProps({ editId: { type: Number, default: null } })
 
 const fileRef      = ref(null)
 const previewSrc   = ref(null)
 const currentImage = ref(null)
 
-const f = reactive({ asset_id:'', asset_name:'', category:'', estimated_value:'', purchase_price:'', purchase_date:'', document_number:'', location_or_custody:'', status:'ACTIVO', notes:'' })
+const f = reactive({
+  asset_id: '',
+  asset_name: '', category: '', estimated_value: '', purchase_price: '',
+  purchase_date: '', document_number: '', location_or_custody: '',
+  status: 'ACTIVO', notes: ''
+})
 
 function onFile(e) {
   const file = e.target.files[0]
@@ -107,33 +121,54 @@ function onFile(e) {
 
 function setData(d) {
   currentImage.value = d.image_path || null
-  previewSrc.value = null
+  previewSrc.value   = null
   Object.assign(f, {
-    asset_id:           d.asset_id || '',
-    asset_name:         d.asset_name || '',
-    category:           d.category || '',
-    estimated_value:    d.estimated_value || '',
-    purchase_price:     d.purchase_price || '',
-    purchase_date:      d.purchase_date || '',
-    document_number:    d.document_number || '',
-    location_or_custody:d.location_or_custody || '',
-    status:             d.status || 'ACTIVO',
-    notes:              d.notes || '',
+    asset_id:            d.asset_id            || '',
+    asset_name:          d.asset_name          || '',
+    category:            d.category            || '',
+    estimated_value:     d.estimated_value     || '',
+    purchase_price:      d.purchase_price      || '',
+    purchase_date:       d.purchase_date       || '',
+    document_number:     d.document_number     || '',
+    location_or_custody: d.location_or_custody || '',
+    status:              d.status              || 'ACTIVO',
+    notes:               d.notes              || '',
   })
 }
 
 function getFormData() {
   if (!f.asset_name || !f.category || !f.estimated_value) return null
-  const fd = new FormData()
-  // Map asset_id to edit_asset_id for PHP edit handler
-  if (f.asset_id) fd.append('edit_asset_id', f.asset_id)
-  Object.entries(f).forEach(([k, v]) => {
-    if (k !== 'asset_id' && v !== '' && v !== null) {
-      const key = f.asset_id ? 'edit_' + k : k
-      fd.append(key, v)
-    }
-  })
-  if (fileRef.value?.files[0]) fd.append('asset_image', fileRef.value.files[0])
+
+  const fd     = new FormData()
+  const isEdit = !!f.asset_id
+
+  if (isEdit) {
+    // editAsset.php expects every field prefixed with "edit_"
+    fd.append('edit_asset_id',            f.asset_id)
+    fd.append('edit_asset_name',          f.asset_name)
+    fd.append('edit_category',            f.category)
+    fd.append('edit_estimated_value',     f.estimated_value)
+    fd.append('edit_purchase_price',      f.purchase_price)
+    fd.append('edit_purchase_date',       f.purchase_date)
+    fd.append('edit_document_number',     f.document_number)
+    fd.append('edit_location_or_custody', f.location_or_custody)
+    fd.append('edit_status',              f.status)
+    fd.append('edit_notes',               f.notes)
+    if (fileRef.value?.files[0]) fd.append('edit_asset_image', fileRef.value.files[0])
+  } else {
+    // createAsset.php expects plain field names
+    fd.append('asset_name',          f.asset_name)
+    fd.append('category',            f.category)
+    fd.append('estimated_value',     f.estimated_value)
+    fd.append('purchase_price',      f.purchase_price)
+    fd.append('purchase_date',       f.purchase_date)
+    fd.append('document_number',     f.document_number)
+    fd.append('location_or_custody', f.location_or_custody)
+    fd.append('status',              f.status)
+    fd.append('notes',               f.notes)
+    if (fileRef.value?.files[0]) fd.append('asset_image', fileRef.value.files[0])
+  }
+
   return fd
 }
 

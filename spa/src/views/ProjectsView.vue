@@ -24,8 +24,7 @@
     </div>
 
     <!-- Add -->
-    <AppModal v-model="showAdd" title="Nuevo Proyecto" icon="glyphicon-plus"
-              @closed="resetForm">
+    <AppModal v-model="showAdd" title="Nuevo Proyecto" icon="glyphicon-plus" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
         <ProjectForm ref="addFormRef" />
@@ -33,14 +32,14 @@
       <template #footer>
         <button class="btn btn-default" @click="showAdd = false">Cancelar</button>
         <button class="btn btn-primary" :disabled="saving" @click="submitAdd">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Guardar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Guardar' }}
         </button>
       </template>
     </AppModal>
 
     <!-- Edit -->
-    <AppModal v-model="showEdit" title="Editar Proyecto" icon="glyphicon-edit"
-              @closed="resetForm">
+    <AppModal v-model="showEdit" title="Editar Proyecto" icon="glyphicon-edit" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
         <ProjectForm ref="editFormRef" :edit-id="editId" />
@@ -48,7 +47,8 @@
       <template #footer>
         <button class="btn btn-default" @click="showEdit = false">Cancelar</button>
         <button class="btn btn-primary" :disabled="saving" @click="submitEdit">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Actualizar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Actualizar' }}
         </button>
       </template>
     </AppModal>
@@ -58,7 +58,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, onUnmounted } from 'vue'
 import { useProjectStore } from '@/stores/useProjectStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
@@ -72,17 +72,12 @@ const showAdd  = ref(false)
 const showEdit = ref(false)
 const saving   = ref(false)
 const formError = ref('')
-const editId   = ref(null)
+const editId    = ref(null)
 const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
 
-onMounted(async () => {
-  await store.load()
-  document.addEventListener('click', handleTableAction)
-})
-
-function openAdd() { resetForm(); showAdd.value = true }
+function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
 async function submitAdd() {
@@ -119,7 +114,11 @@ async function handleTableAction(e) {
     e.preventDefault()
     const id = parseInt(editMatch[1])
     const { data } = await api.getProjectData(id)
-    if (data) { editId.value = id; showEdit.value = true; setTimeout(() => editFormRef.value?.setData(data), 50) }
+    if (data) {
+      editId.value = id
+      showEdit.value = true
+      setTimeout(() => editFormRef.value?.setData(data), 50)
+    }
   }
 
   const removeMatch = onclickAttr.match(/removeProject\((\d+)\)/)
@@ -131,4 +130,13 @@ async function handleTableAction(e) {
     else toast.danger(data.messages)
   }
 }
+
+onMounted(async () => {
+  await store.load()
+  document.addEventListener('click', handleTableAction)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleTableAction)
+})
 </script>

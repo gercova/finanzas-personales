@@ -14,6 +14,9 @@ const routes = [
 ]
 
 const router = createRouter({
+  // createWebHashHistory uses #/route — no server rewrite needed.
+  // This is the safest choice for a PHP-hosted SPA where the shell page
+  // may be accessed as /app.php or via /app/* rewrites.
   history: createWebHistory('/app/'),
   routes,
   scrollBehavior: () => ({ top: 0 })

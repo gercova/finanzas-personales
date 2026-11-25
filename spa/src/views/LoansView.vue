@@ -5,7 +5,6 @@
       <li class="active">Préstamos</li>
     </ol>
 
-    <!-- Legend -->
     <div style="margin-bottom:12px;">
       <span class="label" style="background:#e74c3c;padding:4px 10px;">PENDIENTE</span>&nbsp;
       <span class="label" style="background:#f39c12;padding:4px 10px;">PARCIAL</span>&nbsp;
@@ -40,7 +39,8 @@
       <template #footer>
         <button class="btn btn-default" @click="showAdd = false">Cancelar</button>
         <button class="btn btn-danger" :disabled="saving" @click="submitAdd">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Guardar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Guardar' }}
         </button>
       </template>
     </AppModal>
@@ -55,7 +55,8 @@
       <template #footer>
         <button class="btn btn-default" @click="showEdit = false">Cancelar</button>
         <button class="btn btn-primary" :disabled="saving" @click="submitEdit">
-          <i class="glyphicon glyphicon-floppy-disk"></i> {{ saving ? 'Guardando…' : 'Actualizar' }}
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ saving ? 'Guardando…' : 'Actualizar' }}
         </button>
       </template>
     </AppModal>
@@ -66,14 +67,16 @@
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
         <div v-if="payInfo" class="alert alert-info" style="padding:8px 12px;font-size:13px;">
-          Prestatario: <strong>{{ payInfo.borrower }}</strong> — Pendiente: <strong>S/ {{ payInfo.pending }}</strong>
+          Prestatario: <strong>{{ payInfo.borrower }}</strong>
+          — Pendiente: <strong>S/ {{ payInfo.pending }}</strong>
         </div>
         <PaymentForm ref="payFormRef" :accounts="accounts" />
       </template>
       <template #footer>
         <button class="btn btn-default" @click="showPay = false">Cancelar</button>
         <button class="btn btn-success" :disabled="saving" @click="submitPayment">
-          <i class="glyphicon glyphicon-ok"></i> {{ saving ? 'Guardando…' : 'Registrar Pago' }}
+          <i class="glyphicon glyphicon-ok"></i>
+          {{ saving ? 'Guardando…' : 'Registrar Pago' }}
         </button>
       </template>
     </AppModal>
@@ -83,7 +86,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted } from 'vue'
+import { ref, inject, onMounted, onUnmounted } from 'vue'
 import { useLoanStore } from '@/stores/useLoanStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
@@ -99,21 +102,16 @@ const showEdit = ref(false)
 const showPay  = ref(false)
 const saving   = ref(false)
 const formError = ref('')
-const editId   = ref(null)
-const payInfo  = ref(null)
+const editId    = ref(null)
+const payInfo   = ref(null)
 const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
 const payFormRef  = ref(null)
-const accounts = ref([])
 
-onMounted(async () => {
-  await store.load()
-  if (window.loanAccounts) accounts.value = window.loanAccounts
-  document.addEventListener('click', handleTableAction)
-})
+const accounts = ref(window.loanAccounts || [])
 
-function openAdd() { resetForm(); showAdd.value = true }
+function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
 async function submitAdd() {
@@ -160,7 +158,11 @@ async function handleTableAction(e) {
     e.preventDefault()
     const id = parseInt(el.dataset.id)
     const { data } = await api.getLoanData(id)
-    if (data.success) { editId.value = id; showEdit.value = true; setTimeout(() => editFormRef.value?.setData(data.data), 50) }
+    if (data.success) {
+      editId.value = id
+      showEdit.value = true
+      setTimeout(() => editFormRef.value?.setData(data.data), 50)
+    }
   }
 
   if (el.classList.contains('remove-loan')) {
@@ -187,4 +189,13 @@ async function handleTableAction(e) {
     else toast.danger(data.messages)
   }
 }
+
+onMounted(async () => {
+  await store.load()
+  document.addEventListener('click', handleTableAction)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleTableAction)
+})
 </script>

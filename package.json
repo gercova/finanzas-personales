@@ -1,0 +1,12 @@
+{
+  "name": "personal-finance",
+  "version": "1.0.0",
+  "private": true,
+  "description": "myFin — Personal Finance & Inventory Management (Vue 3 SPA + PHP backend)",
+  "scripts": {
+    "install": "npm install --prefix spa",
+    "build": "npm run build --prefix spa",
+    "dev": "npm run dev --prefix spa",
+    "preview": "npm run preview --prefix spa"
+  }
+}
