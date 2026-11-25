@@ -35,6 +35,10 @@
 				'X-CSRF-Token': systemCsrfToken
 			}
 		});
+		if ($.fn.modal && $.fn.modal.Constructor && $.fn.modal.Constructor.DEFAULTS) {
+			$.fn.modal.Constructor.DEFAULTS.backdrop = 'static';
+			$.fn.modal.Constructor.DEFAULTS.keyboard = false;
+		}
 	</script>
 	<style type="text/css">
 		/* ==============================================================

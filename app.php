@@ -164,6 +164,12 @@ window.loanAccounts       = <?php echo json_encode($accounts); ?>;
 // Update CSRF token header on all jQuery AJAX too
 $.ajaxSetup({ headers: { 'X-CSRF-Token': window.systemCsrfToken } });
 
+// Prevent Bootstrap 3 modals from closing inadvertently via backdrop click or Escape
+if ($.fn.modal && $.fn.modal.Constructor && $.fn.modal.Constructor.DEFAULTS) {
+    $.fn.modal.Constructor.DEFAULTS.backdrop = 'static';
+    $.fn.modal.Constructor.DEFAULTS.keyboard = false;
+}
+
 // Nav helper — called by navbar links
 function spaNav(path) {
     if (window.__vueRouter) {

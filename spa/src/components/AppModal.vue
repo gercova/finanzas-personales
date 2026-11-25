@@ -10,13 +10,13 @@
   <Teleport to="body">
     <Transition name="modal-fade" @after-leave="onAfterLeave">
       <div v-if="modelValue" class="modal" tabindex="-1" role="dialog"
-           style="display:block;" @mousedown.self="close">
+           style="display:block;" @keydown.esc.stop.prevent>
 
         <div :class="['modal-dialog', sizeClass]" role="document">
           <div class="modal-content" @click.stop>
 
             <div class="modal-header" :style="headerStyle">
-              <button type="button" class="close" @click="close" :style="closeStyle">
+              <button type="button" class="close" @click="close" :style="closeStyle" aria-label="Cerrar">
                 <span aria-hidden="true">&times;</span>
               </button>
               <h4 class="modal-title">
@@ -40,9 +40,9 @@
       </div>
     </Transition>
 
-    <!-- Backdrop -->
+    <!-- Static Backdrop (does not close modal on click) -->
     <Transition name="backdrop-fade">
-      <div v-if="modelValue" class="modal-backdrop" style="opacity:.5;" @click="close" />
+      <div v-if="modelValue" class="modal-backdrop" style="opacity:.5;" />
     </Transition>
   </Teleport>
 </template>
