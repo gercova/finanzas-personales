@@ -295,6 +295,12 @@ $currentPage = basename($_SERVER['PHP_SELF']);
 							<i class="glyphicon glyphicon-stats text-info"></i> Reportes
 						</a>
 					</li>
+					<!-- SPA mode link -->
+					<li id="navSPA" <?php if($currentPage==='app.php') echo 'class="active"'; ?>>
+						<a href="app.php" title="Cambiar a modo SPA (Vue 3)" style="font-weight:600;">
+							<i class="glyphicon glyphicon-flash" style="color:#8e44ad;"></i> SPA
+						</a>
+					</li>
 					<!-- User options dropdown (matching screenshot with icon and caret) -->
 					<li class="dropdown" id="navSetting">
 						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">

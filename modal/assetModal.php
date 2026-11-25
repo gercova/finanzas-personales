@@ -22,11 +22,11 @@
                                 <label>Categoría <span class="text-danger">*</span></label>
                                 <select class="form-control" name="category" id="category" required>
                                     <option value="">-- Seleccionar --</option>
-                                    <option value="VEHICULO">🚗 Vehículo</option>
-                                    <option value="INMUEBLE">🏠 Inmueble</option>
-                                    <option value="DOCUMENTO_FIDUCIARIO">📄 Documento Fiduciario</option>
-                                    <option value="EQUIPO_TECNOLOGICO">💻 Equipo Tecnológico</option>
-                                    <option value="OTRO">📦 Otro</option>
+                                    <option value="VEHICULO"> Vehículo</option>
+                                    <option value="INMUEBLE"> Inmueble</option>
+                                    <option value="DOCUMENTO_FIDUCIARIO"> Documento Fiduciario</option>
+                                    <option value="EQUIPO_TECNOLOGICO"> Equipo Tecnológico</option>
+                                    <option value="OTRO"> Otro</option>
                                 </select>
                             </div>
                         </div>
