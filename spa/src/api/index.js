@@ -1,4 +1,4 @@
-import http from './http'
+import http, { getBaseURL } from './http'
 
 // ─── Incomes ──────────────────────────────────────────────────────────────────
 export const fetchIncomes   = ()         => http.get('php_action/fetchIncomes.php')
@@ -45,11 +45,45 @@ export const editAccount    = (fd)       => http.post('php_action/editAccount.ph
 export const removeAccount  = (id)       => http.post('php_action/removeAccount.php', new URLSearchParams({ account_id: id }))
 
 // ─── Financial Categories ─────────────────────────────────────────────────────
-export const fetchFinCategories = ()     => http.get('php_action/fetchFinCategories.php')
+export const fetchFinCategories    = ()   => http.get('php_action/fetchFinCategories.php')
+export const getFinCategoryData   = (id) => http.get('php_action/getFinCategoryData.php', { params: { id } })
+export const createFinCategory    = (fd) => http.post('php_action/createFinCategory.php', fd)
+export const editFinCategory      = (fd) => http.post('php_action/editFinCategory.php', fd)
+export const removeFinCategory    = (id) => http.post('php_action/removeFinCategory.php', new URLSearchParams({ category_id: id }))
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
-export const fetchCalendarEvents = ()    => http.get('php_action/fetchCalendarEvents.php')
+export const getDashboardData    = ()     => http.get('php_action/getDashboardData.php')
+export const fetchCalendarEvents = ()     => http.get('php_action/fetchCalendarEvents.php')
+
+// ─── Reports ──────────────────────────────────────────────────────────────────
+export const getFinancialReportData = ()  => http.get('php_action/getFinancialReportData.php')
+
+// ─── Settings ─────────────────────────────────────────────────────────────────
+export const getSettingsData     = ()     => http.get('php_action/getSettingsData.php')
+export const updateSpendingLimit = (fd)   => http.post('php_action/updateSpendingLimit.php', fd)
+export const changeUsername      = (fd)   => http.post('php_action/changeUsername.php', fd)
+export const changePassword      = (fd)   => http.post('php_action/changePassword.php', fd)
+
+// ─── POS / Inventory ──────────────────────────────────────────────────────────
+export const fetchBrand          = ()     => http.get('php_action/fetchBrand.php')
+export const createBrand         = (fd)   => http.post('php_action/createBrand.php', fd)
+export const editBrand           = (fd)   => http.post('php_action/editBrand.php', fd)
+export const removeBrand         = (id)   => http.post('php_action/removeBrand.php', new URLSearchParams({ brandId: id }))
+export const fetchSelectedBrand  = (id)   => http.post('php_action/fetchSelectedBrand.php', new URLSearchParams({ brandId: id }))
+
+export const fetchCategories     = ()     => http.get('php_action/fetchCategories.php')
+export const createCategories    = (fd)   => http.post('php_action/createCategories.php', fd)
+export const editCategories      = (fd)   => http.post('php_action/editCategories.php', fd)
+export const removeCategories    = (id)   => http.post('php_action/removeCategories.php', new URLSearchParams({ categoriesId: id }))
+
+export const fetchProduct        = ()     => http.get('php_action/fetchProduct.php')
+export const createProduct       = (fd)   => http.post('php_action/createProduct.php', fd)
+export const editProduct         = (fd)   => http.post('php_action/editProduct.php', fd)
+export const removeProduct       = (id)   => http.post('php_action/removeProduct.php', new URLSearchParams({ productId: id }))
+export const fetchSelectedProduct= (id)   => http.post('php_action/fetchSelectedProduct.php', new URLSearchParams({ productId: id }))
+
+export const fetchOrder          = ()     => http.get('php_action/fetchOrder.php')
 
 // ─── Bulk import & templates ──────────────────────────────────────────────────
-export const bulkImport      = (fd)      => http.post('php_action/bulkImport.php', fd)
-export const templateUrl     = (module)  => `php_action/downloadTemplate.php?module=${module}&csrf_token=${encodeURIComponent(window.systemCsrfToken || '')}`
+export const bulkImport          = (fd)   => http.post('php_action/bulkImport.php', fd)
+export const templateUrl         = (module) => `${getBaseURL()}php_action/downloadTemplate.php?module=${module}&csrf_token=${encodeURIComponent(window.systemCsrfToken || '')}`

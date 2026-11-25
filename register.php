@@ -6,7 +6,7 @@ setSecurityHeaders();
 initSecureSession();
 
 if (isset($_SESSION['userId'])) {
-    header('location: dashboard.php');
+    header('location: app.php');
     exit();
 }
 

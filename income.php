@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/income');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 <?php require_once 'modal/incomeModal.php'; ?>
 
 <?php

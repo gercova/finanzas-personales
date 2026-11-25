@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/assets');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 <?php
 // ── Summary stats via optimized View v_user_financial_summary (1 query instead of 3) ──
 $userId      = (int)$_SESSION['userId'];

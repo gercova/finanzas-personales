@@ -5,6 +5,34 @@
       <li class="active">Activos Valiosos</li>
     </ol>
 
+    <!-- Stat cards matching assets.php -->
+    <div class="row" style="margin-bottom:20px;">
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-default text-center" style="box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="panel-body">
+            <h2 class="text-primary" style="margin:0 0 5px; font-weight:700;">{{ assetStats.totalCount }}</h2>
+            <p style="margin:0; color:#666;"><i class="glyphicon glyphicon-certificate"></i> Total de Activos</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-default text-center" style="box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="panel-body">
+            <h2 class="text-success" style="margin:0 0 5px; font-weight:700;">S/ {{ fmt(assetStats.totalValue) }}</h2>
+            <p style="margin:0; color:#666;"><i class="glyphicon glyphicon-usd"></i> Valor Total Estimado (Activos)</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-default text-center" style="box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+          <div class="panel-body">
+            <h2 class="text-warning" style="margin:0 0 5px; font-weight:700;">{{ assetStats.garantiaCount }}</h2>
+            <p style="margin:0; color:#666;"><i class="glyphicon glyphicon-lock"></i> En Garantía de Préstamo</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="panel panel-default">
       <DataTable
         title="Registro de Activos Valiosos"
@@ -23,7 +51,7 @@
       </DataTable>
     </div>
 
-    <!-- Add -->
+    <!-- Add Modal -->
     <AppModal v-model="showAdd" title="Registrar Activo Valioso" icon="glyphicon-plus"
               size="lg" @closed="resetForm">
       <template #body>
@@ -39,7 +67,7 @@
       </template>
     </AppModal>
 
-    <!-- Edit -->
+    <!-- Edit Modal -->
     <AppModal v-model="showEdit" title="Editar Activo" icon="glyphicon-edit"
               size="lg" @closed="resetForm">
       <template #body>
@@ -60,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useAssetStore } from '@/stores/useAssetStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
@@ -78,6 +106,27 @@ const editId    = ref(null)
 const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
+
+const assetStats = computed(() => {
+  let totalValue = 0, garantiaCount = 0
+  for (const r of store.rows) {
+    const valStr = String(r[3] || '').replace(/[^0-9.]/g, '')
+    totalValue += parseFloat(valStr) || 0
+    if (String(r[7] || '').includes('GARANTIA')) {
+      garantiaCount++
+    }
+  }
+  return {
+    totalCount: store.rows.length,
+    totalValue,
+    garantiaCount
+  }
+})
+
+function fmt(n) {
+  const num = parseFloat(n) || 0
+  return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }

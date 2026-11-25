@@ -5,122 +5,278 @@
       <li class="active">Cuentas y Categorías</li>
     </ol>
 
-    <div class="panel panel-default">
+    <!-- Panel 1: Accounts (Bancos, Billeteras, Efectivo) -->
+    <div class="panel panel-default" style="margin-bottom:25px;">
       <DataTable
-        title="Gestión de Cuentas"
+        title="Mis Cuentas Financieras y Efectivo"
         icon="glyphicon-credit-card text-primary"
         :headers="['#','Cuenta','Tipo','N° Cuenta','Moneda','Saldo Inicial','Saldo Actual','Estado','Acción']"
-        :store="store"
+        :store="accountStore"
       >
         <template #actions>
-          <button class="btn btn-primary" @click="openAdd">
+          <button class="btn btn-primary" @click="openAddAccount">
             <i class="glyphicon glyphicon-plus-sign"></i> Nueva Cuenta
           </button>
         </template>
       </DataTable>
     </div>
 
-    <!-- Add -->
-    <AppModal v-model="showAdd" title="Nueva Cuenta" icon="glyphicon-plus" @closed="resetForm">
+    <!-- Panel 2: Financial Categories (Ingresos y Gastos) -->
+    <div class="panel panel-default">
+      <DataTable
+        title="Mis Categorías de Ingresos y Gastos"
+        icon="glyphicon-tags text-info"
+        :headers="['#','Nombre de Categoría','Tipo','Estado','Acción']"
+        :store="finCategoryStore"
+      >
+        <template #actions>
+          <button class="btn btn-info" @click="openAddCategory">
+            <i class="glyphicon glyphicon-plus-sign"></i> Nueva Categoría
+          </button>
+        </template>
+      </DataTable>
+    </div>
+
+    <!-- ===== ACCOUNT MODALS ===== -->
+    <!-- Add Account Modal -->
+    <AppModal v-model="showAddAccount" title="Nueva Cuenta" icon="glyphicon-plus" @closed="resetAccountForm">
       <template #body>
-        <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <AccountForm ref="addFormRef" />
+        <div v-if="accountFormError" class="alert alert-danger">{{ accountFormError }}</div>
+        <AccountForm ref="addAccountFormRef" />
       </template>
       <template #footer>
-        <button class="btn btn-default" @click="showAdd = false">Cancelar</button>
-        <button class="btn btn-primary" :disabled="saving" @click="submitAdd">
+        <button class="btn btn-default" @click="showAddAccount = false">Cancelar</button>
+        <button class="btn btn-primary" :disabled="savingAccount" @click="submitAddAccount">
           <i class="glyphicon glyphicon-floppy-disk"></i>
-          {{ saving ? 'Guardando…' : 'Guardar' }}
+          {{ savingAccount ? 'Guardando…' : 'Guardar' }}
         </button>
       </template>
     </AppModal>
 
-    <!-- Edit -->
-    <AppModal v-model="showEdit" title="Editar Cuenta" icon="glyphicon-edit" @closed="resetForm">
+    <!-- Edit Account Modal -->
+    <AppModal v-model="showEditAccount" title="Editar Cuenta" icon="glyphicon-edit" @closed="resetAccountForm">
       <template #body>
-        <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <AccountForm ref="editFormRef" :edit-id="editId" />
+        <div v-if="accountFormError" class="alert alert-danger">{{ accountFormError }}</div>
+        <AccountForm ref="editAccountFormRef" :edit-id="editAccountId" />
       </template>
       <template #footer>
-        <button class="btn btn-default" @click="showEdit = false">Cancelar</button>
-        <button class="btn btn-primary" :disabled="saving" @click="submitEdit">
+        <button class="btn btn-default" @click="showEditAccount = false">Cancelar</button>
+        <button class="btn btn-primary" :disabled="savingAccount" @click="submitEditAccount">
           <i class="glyphicon glyphicon-floppy-disk"></i>
-          {{ saving ? 'Guardando…' : 'Actualizar' }}
+          {{ savingAccount ? 'Guardando…' : 'Actualizar' }}
         </button>
       </template>
     </AppModal>
+
+    <!-- ===== FINANCIAL CATEGORY MODALS ===== -->
+    <!-- Add Category Modal -->
+    <AppModal v-model="showAddCategory" title="Nueva Categoría" icon="glyphicon-tag" header-color="#31b0d5" @closed="resetCategoryForm">
+      <template #body>
+        <div v-if="categoryFormError" class="alert alert-danger">{{ categoryFormError }}</div>
+        <FinCategoryForm ref="addCategoryFormRef" />
+      </template>
+      <template #footer>
+        <button class="btn btn-default" @click="showAddCategory = false">Cancelar</button>
+        <button class="btn btn-info" :disabled="savingCategory" @click="submitAddCategory">
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ savingCategory ? 'Guardando…' : 'Guardar' }}
+        </button>
+      </template>
+    </AppModal>
+
+    <!-- Edit Category Modal -->
+    <AppModal v-model="showEditCategory" title="Editar Categoría" icon="glyphicon-edit" header-color="#31b0d5" @closed="resetCategoryForm">
+      <template #body>
+        <div v-if="categoryFormError" class="alert alert-danger">{{ categoryFormError }}</div>
+        <FinCategoryForm ref="editCategoryFormRef" :edit-id="editCategoryId" />
+      </template>
+      <template #footer>
+        <button class="btn btn-default" @click="showEditCategory = false">Cancelar</button>
+        <button class="btn btn-info" :disabled="savingCategory" @click="submitEditCategory">
+          <i class="glyphicon glyphicon-floppy-disk"></i>
+          {{ savingCategory ? 'Guardando…' : 'Actualizar' }}
+        </button>
+      </template>
+    </AppModal>
+
   </div>
 </template>
 
 <script setup>
 import { ref, inject, onMounted, onUnmounted } from 'vue'
 import { useAccountStore } from '@/stores/useAccountStore'
-import DataTable   from '@/components/DataTable.vue'
-import AppModal    from '@/components/AppModal.vue'
+import { useFinCategoryStore } from '@/stores/useFinCategoryStore'
+import DataTable from '@/components/DataTable.vue'
+import AppModal  from '@/components/AppModal.vue'
 import AccountForm from '@/components/forms/AccountForm.vue'
-import * as api    from '@/api'
+import FinCategoryForm from '@/components/forms/FinCategoryForm.vue'
+import * as api from '@/api'
 
-const toast    = inject('toast')
-const store    = useAccountStore()
-const showAdd  = ref(false)
-const showEdit = ref(false)
-const saving   = ref(false)
-const formError = ref('')
-const editId    = ref(null)
-const addFormRef  = ref(null)
-const editFormRef = ref(null)
+const toast            = inject('toast')
+const accountStore     = useAccountStore()
+const finCategoryStore = useFinCategoryStore()
 
-function openAdd()   { resetForm(); showAdd.value = true }
-function resetForm() { formError.value = '' }
+// Account Modal State
+const showAddAccount     = ref(false)
+const showEditAccount    = ref(false)
+const savingAccount      = ref(false)
+const accountFormError   = ref('')
+const editAccountId      = ref(null)
+const addAccountFormRef  = ref(null)
+const editAccountFormRef = ref(null)
 
-async function submitAdd() {
-  saving.value = true; formError.value = ''
+// Category Modal State
+const showAddCategory     = ref(false)
+const showEditCategory    = ref(false)
+const savingCategory      = ref(false)
+const categoryFormError   = ref('')
+const editCategoryId      = ref(null)
+const addCategoryFormRef  = ref(null)
+const editCategoryFormRef = ref(null)
+
+function openAddAccount()   { resetAccountForm(); showAddAccount.value = true }
+function resetAccountForm() { accountFormError.value = '' }
+
+function openAddCategory()   { resetCategoryForm(); showAddCategory.value = true }
+function resetCategoryForm() { categoryFormError.value = '' }
+
+async function submitAddAccount() {
+  savingAccount.value = true
+  accountFormError.value = ''
   try {
-    const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    const fd = addAccountFormRef.value?.getFormData()
+    if (!fd) { accountFormError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.createAccount(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
-    else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
-  finally { saving.value = false }
+    if (data.success) {
+      showAddAccount.value = false
+      await accountStore.reload()
+      toast.success(data.messages)
+    } else {
+      accountFormError.value = data.messages
+    }
+  } catch {
+    accountFormError.value = 'Error de comunicación.'
+  } finally {
+    savingAccount.value = false
+  }
 }
 
-async function submitEdit() {
-  saving.value = true; formError.value = ''
+async function submitEditAccount() {
+  savingAccount.value = true
+  accountFormError.value = ''
   try {
-    const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    const fd = editAccountFormRef.value?.getFormData()
+    if (!fd) { accountFormError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.editAccount(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
-    else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
-  finally { saving.value = false }
+    if (data.success) {
+      showEditAccount.value = false
+      await accountStore.reload()
+      toast.success(data.messages)
+    } else {
+      accountFormError.value = data.messages
+    }
+  } catch {
+    accountFormError.value = 'Error de comunicación.'
+  } finally {
+    savingAccount.value = false
+  }
+}
+
+async function submitAddCategory() {
+  savingCategory.value = true
+  categoryFormError.value = ''
+  try {
+    const fd = addCategoryFormRef.value?.getFormData()
+    if (!fd) { categoryFormError.value = 'Complete los campos requeridos.'; return }
+    const { data } = await api.createFinCategory(fd)
+    if (data.success) {
+      showAddCategory.value = false
+      await finCategoryStore.reload()
+      toast.success(data.messages)
+    } else {
+      categoryFormError.value = data.messages
+    }
+  } catch {
+    categoryFormError.value = 'Error de comunicación.'
+  } finally {
+    savingCategory.value = false
+  }
+}
+
+async function submitEditCategory() {
+  savingCategory.value = true
+  categoryFormError.value = ''
+  try {
+    const fd = editCategoryFormRef.value?.getFormData()
+    if (!fd) { categoryFormError.value = 'Complete los campos requeridos.'; return }
+    const { data } = await api.editFinCategory(fd)
+    if (data.success) {
+      showEditCategory.value = false
+      await finCategoryStore.reload()
+      toast.success(data.messages)
+    } else {
+      categoryFormError.value = data.messages
+    }
+  } catch {
+    categoryFormError.value = 'Error de comunicación.'
+  } finally {
+    savingCategory.value = false
+  }
 }
 
 async function handleTableAction(e) {
   const el = e.target.closest('a')
   if (!el) return
+
+  // Accounts
   if (el.classList.contains('edit-account')) {
     e.preventDefault()
     const id = parseInt(el.dataset.id)
     const { data } = await api.getAccountData(id)
     if (data.success) {
-      editId.value = id
-      showEdit.value = true
-      setTimeout(() => editFormRef.value?.setData(data.data), 50)
+      editAccountId.value = id
+      showEditAccount.value = true
+      setTimeout(() => editAccountFormRef.value?.setData(data.data), 50)
     }
   }
   if (el.classList.contains('remove-account')) {
     e.preventDefault()
     if (!confirm('¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta.')) return
     const { data } = await api.removeAccount(parseInt(el.dataset.id))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
-    else toast.danger(data.messages)
+    if (data.success) {
+      await accountStore.reload()
+      toast.success(data.messages)
+    } else {
+      toast.danger(data.messages)
+    }
+  }
+
+  // Financial Categories
+  if (el.classList.contains('edit-fin-category')) {
+    e.preventDefault()
+    const id = parseInt(el.dataset.id)
+    const { data } = await api.getFinCategoryData(id)
+    if (data.success) {
+      editCategoryId.value = id
+      showEditCategory.value = true
+      setTimeout(() => editCategoryFormRef.value?.setData(data.data), 50)
+    }
+  }
+  if (el.classList.contains('remove-fin-category')) {
+    e.preventDefault()
+    if (!confirm('¿Eliminar esta categoría? Los movimientos existentes conservarán su historial.')) return
+    const { data } = await api.removeFinCategory(parseInt(el.dataset.id))
+    if (data.success) {
+      await finCategoryStore.reload()
+      toast.success(data.messages)
+    } else {
+      toast.danger(data.messages)
+    }
   }
 }
 
 onMounted(async () => {
-  await store.load()
+  await Promise.all([accountStore.load(), finCategoryStore.load()])
   document.addEventListener('click', handleTableAction)
 })
 

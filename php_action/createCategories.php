@@ -19,10 +19,11 @@
 			exit();
 		}
 
-		$sql = "INSERT INTO categories (categories_name, categories_active, categories_status) VALUES (?, ?, 1)";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "INSERT INTO categories (categories_name, categories_active, categories_status, created_by) VALUES (?, ?, 1, ?)";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("si", $categoriesName, $categoriesStatus);
+			$stmt->bind_param("sii", $categoriesName, $categoriesStatus, $userId);
 			if($stmt->execute()){
 				$valid['success'] = true;
 				$valid['messages'] = "Categoría creada exitosamente.";	

@@ -1,8 +1,8 @@
 <?php
 /**
  * app.php — SPA shell page.
- * Serves the Vue 3 SPA inside the existing Bootstrap layout.
- * All navigation in the SPA uses history mode under /app/.
+ * Serves the Vue 3 SPA inside the existing Bootstrap 3 layout.
+ * Powered by Vue 3, Vite, Pinia, and Axios.
  */
 require_once 'php_action/core.php';
 require_once 'php_action/security.php';
@@ -36,6 +36,8 @@ if ($stmtCatE) { $stmtCatE->bind_param("i", $userId); $stmtCatE->execute(); $r=$
 
 $stmtProj = $connect->prepare("SELECT project_id AS id, project_name FROM projects WHERE created_by=? AND status='ACTIVE' AND is_deleted=0 ORDER BY project_name");
 if ($stmtProj) { $stmtProj->bind_param("i", $userId); $stmtProj->execute(); $r=$stmtProj->get_result(); while($row=$r->fetch_assoc()) $projects[]=$row; $stmtProj->close(); }
+
+$appBaseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME']), "/\\") . "/";
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -84,7 +86,7 @@ if ($stmtProj) { $stmtProj->bind_param("i", $userId); $stmtProj->execute(); $r=$
         .panel-heading-flex .page-heading { margin:0!important; font-size:16px!important; font-weight:600!important; display:flex!important; align-items:center!important; }
         .panel-heading-flex .btn { margin:0!important; display:inline-flex!important; align-items:center!important; gap:5px!important; }
         /* SPA container */
-        #app { min-height:200px; }
+        #app { min-height:300px; }
     </style>
 </head>
 <body>
@@ -96,7 +98,7 @@ if ($stmtProj) { $stmtProj->bind_param("i", $userId); $stmtProj->execute(); $r=$
                 <span class="sr-only">Toggle navigation</span>
                 <span class="icon-bar"></span><span class="icon-bar"></span><span class="icon-bar"></span>
             </button>
-            <a class="navbar-brand" href="app.php" title="myFin">
+            <a class="navbar-brand" href="#" onclick="return spaNav('/dashboard')" title="myFin">
                 <i class="glyphicon glyphicon-piggy-bank" style="color:#27ae60;"></i> myFin
             </a>
             <div class="myfin-metrics-container hidden-xs">
@@ -110,22 +112,28 @@ if ($stmtProj) { $stmtProj->bind_param("i", $userId); $stmtProj->execute(); $r=$
         </div>
         <div class="collapse navbar-collapse" id="spaNavbar">
             <ul class="nav navbar-nav navbar-right">
-                <li id="navDashboard"><a href="#" onclick="spaNav('/dashboard')"><i class="glyphicon glyphicon-home"></i> Inicio</a></li>
-                <li id="navIncome">   <a href="#" onclick="spaNav('/income')">   <i class="glyphicon glyphicon-arrow-up text-success"></i> Ingresos</a></li>
-                <li id="navExpense">  <a href="#" onclick="spaNav('/expense')">  <i class="glyphicon glyphicon-arrow-down text-danger"></i> Gastos</a></li>
-                <li id="navLoans">    <a href="#" onclick="spaNav('/loans')">    <i class="glyphicon glyphicon-retweet text-warning"></i> Préstamos</a></li>
-                <li id="navProjects"> <a href="#" onclick="spaNav('/projects')"> <i class="glyphicon glyphicon-briefcase text-primary"></i> Proyectos</a></li>
-                <li id="navAssets">   <a href="#" onclick="spaNav('/assets')">   <i class="glyphicon glyphicon-certificate" style="color:#8e44ad;"></i> Activos</a></li>
-                <li id="navReport">   <a href="finance_report.php"><i class="glyphicon glyphicon-stats text-info"></i> Reportes</a></li>
-                <li class="dropdown">
+                <li id="navDashboard" class="active"><a href="#" onclick="return spaNav('/dashboard')"><i class="glyphicon glyphicon-home"></i> Inicio</a></li>
+                <li id="navIncome">   <a href="#" onclick="return spaNav('/income')">   <i class="glyphicon glyphicon-arrow-up text-success"></i> Ingresos</a></li>
+                <li id="navExpense">  <a href="#" onclick="return spaNav('/expense')">  <i class="glyphicon glyphicon-arrow-down text-danger"></i> Gastos</a></li>
+                <li id="navLoans">    <a href="#" onclick="return spaNav('/loans')">    <i class="glyphicon glyphicon-retweet text-warning"></i> Préstamos</a></li>
+                <li id="navProjects"> <a href="#" onclick="return spaNav('/projects')"> <i class="glyphicon glyphicon-briefcase text-primary"></i> Proyectos</a></li>
+                <li id="navAssets">   <a href="#" onclick="return spaNav('/assets')">   <i class="glyphicon glyphicon-certificate" style="color:#8e44ad;"></i> Activos</a></li>
+                <li id="navReport">   <a href="#" onclick="return spaNav('/reports')">  <i class="glyphicon glyphicon-stats text-info"></i> Reportes</a></li>
+                <li class="dropdown" id="navDropdownUser">
                     <a href="#" class="dropdown-toggle" data-toggle="dropdown">
                         <i class="glyphicon glyphicon-user"></i> <span class="caret"></span>
                     </a>
                     <ul class="dropdown-menu">
                         <li class="dropdown-header">Usuario: <strong><?php echo htmlspecialchars($_SESSION['username'] ?? 'admin', ENT_QUOTES, 'UTF-8'); ?></strong></li>
                         <li role="separator" class="divider"></li>
-                        <li><a href="#" onclick="spaNav('/accounts')"><i class="glyphicon glyphicon-credit-card"></i> Cuentas</a></li>
-                        <li><a href="setting.php"><i class="glyphicon glyphicon-wrench"></i> Configuración</a></li>
+                        <li id="navAccounts"><a href="#" onclick="return spaNav('/accounts')"><i class="glyphicon glyphicon-credit-card"></i> Cuentas y Categorías</a></li>
+                        <li id="navSetting"><a href="#" onclick="return spaNav('/settings')"><i class="glyphicon glyphicon-wrench"></i> Configuración</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li class="dropdown-header">Inventario / POS</li>
+                        <li id="navBrands"><a href="#" onclick="return spaNav('/brands')"><i class="glyphicon glyphicon-tag"></i> Fabricantes</a></li>
+                        <li id="navCategories"><a href="#" onclick="return spaNav('/categories')"><i class="glyphicon glyphicon-th-list"></i> Categorías POS</a></li>
+                        <li id="navProducts"><a href="#" onclick="return spaNav('/products')"><i class="glyphicon glyphicon-barcode"></i> Productos</a></li>
+                        <li id="navOrders"><a href="#" onclick="return spaNav('/orders')"><i class="glyphicon glyphicon-shopping-cart"></i> Órdenes</a></li>
                         <li role="separator" class="divider"></li>
                         <li><a href="logout.php"><i class="glyphicon glyphicon-log-out"></i> Salir</a></li>
                     </ul>
@@ -144,6 +152,7 @@ if ($stmtProj) { $stmtProj->bind_param("i", $userId); $stmtProj->execute(); $r=$
 <script>
 window.systemCsrfToken   = <?php echo json_encode(getCsrfToken()); ?>;
 window.__APP_NAME__       = <?php echo json_encode(env('APP_NAME', 'myFin')); ?>;
+window.__BASE_URL__       = <?php echo json_encode($appBaseUrl); ?>;
 window.incomeAccounts     = <?php echo json_encode($accounts); ?>;
 window.incomeCategories   = <?php echo json_encode($incomeCategories); ?>;
 window.incomeProjects     = <?php echo json_encode($projects); ?>;
@@ -152,7 +161,7 @@ window.expenseCategories  = <?php echo json_encode($expenseCategories); ?>;
 window.expenseProjects    = <?php echo json_encode($projects); ?>;
 window.loanAccounts       = <?php echo json_encode($accounts); ?>;
 
-// Update CSRF token header on all jQuery AJAX too (keeps Bootstrap dropdowns, etc. working)
+// Update CSRF token header on all jQuery AJAX too
 $.ajaxSetup({ headers: { 'X-CSRF-Token': window.systemCsrfToken } });
 
 // Nav helper — called by navbar links
@@ -160,17 +169,8 @@ function spaNav(path) {
     if (window.__vueRouter) {
         window.__vueRouter.push(path);
     } else {
-        window.location.hash = path;
+        window.location.hash = '#' + path;
     }
-    // Update active state
-    var navMap = {
-        '/dashboard': 'navDashboard', '/income': 'navIncome', '/expense': 'navExpense',
-        '/loans': 'navLoans', '/projects': 'navProjects', '/assets': 'navAssets',
-        '/accounts': 'navDashboard',
-    };
-    document.querySelectorAll('.navbar-nav > li').forEach(function(li){ li.classList.remove('active'); });
-    var id = navMap[path];
-    if (id) document.getElementById(id)?.classList.add('active');
     return false;
 }
 </script>
@@ -182,20 +182,26 @@ if (file_exists($spaIndexPath)) {
     $spaHtml = file_get_contents($spaIndexPath);
     // Extract <script type="module"> src
     if (preg_match('/<script[^>]+type=["\']module["\'][^>]+src=["\']([^"\']+)["\'][^>]*>/i', $spaHtml, $m)) {
-        $jsPath  = htmlspecialchars($m[1], ENT_QUOTES, 'UTF-8');
+        $cleanSrc = preg_replace('/^\.\//', '', $m[1]);
+        $cleanSrc = ltrim($cleanSrc, '/');
+        $jsPath   = 'spa/dist/' . $cleanSrc;
         echo "<script type=\"module\" crossorigin src=\"{$jsPath}\"></script>\n    ";
     }
     // Extract modulepreload links
     preg_match_all('/<link[^>]+rel=["\']modulepreload["\'][^>]+href=["\']([^"\']+)["\'][^>]*>/i', $spaHtml, $preloads);
     foreach ($preloads[1] as $href) {
-        $href = htmlspecialchars($href, ENT_QUOTES, 'UTF-8');
-        echo "    <link rel=\"modulepreload\" crossorigin href=\"{$href}\">\n";
+        $cleanHref = preg_replace('/^\.\//', '', $href);
+        $cleanHref = ltrim($cleanHref, '/');
+        $hrefPath  = 'spa/dist/' . $cleanHref;
+        echo "    <link rel=\"modulepreload\" crossorigin href=\"{$hrefPath}\">\n";
     }
     // Extract CSS
     preg_match_all('/<link[^>]+rel=["\']stylesheet["\'][^>]+href=["\']([^"\']+)["\'][^>]*>/i', $spaHtml, $styles);
     foreach ($styles[1] as $href) {
-        $href = htmlspecialchars($href, ENT_QUOTES, 'UTF-8');
-        echo "    <link rel=\"stylesheet\" crossorigin href=\"{$href}\">\n";
+        $cleanHref = preg_replace('/^\.\//', '', $href);
+        $cleanHref = ltrim($cleanHref, '/');
+        $hrefPath  = 'spa/dist/' . $cleanHref;
+        echo "    <link rel=\"stylesheet\" crossorigin href=\"{$hrefPath}\">\n";
     }
 } else {
     echo "<!-- SPA bundle not found. Run: cd spa && npm run build -->\n";

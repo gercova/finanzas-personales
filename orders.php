@@ -4,6 +4,11 @@
 
 	$orderAction = isset($_GET['o']) ? $_GET['o'] : 'manord';
 
+	if($orderAction == 'manord' && !isset($_GET['classic'])){
+		header('Location: app.php#/orders');
+		exit();
+	}
+
 	if($orderAction == 'add'){ 
 		// add order
 		echo "<div class='div-request div-hide'>add</div>";
@@ -234,8 +239,9 @@
 				<?php echo csrfField(); ?>
   				<?php 
   					$orderId = isset($_GET['i']) ? (int)$_GET['i'] : 0;
+  					$userId = (int)$_SESSION['userId'];
   					$sql = "SELECT orders.order_id, orders.order_date, orders.client_name, orders.client_contact, orders.sub_total, orders.vat, orders.total_amount, orders.discount, orders.grand_total, orders.paid, orders.due, orders.payment_type, orders.payment_status FROM orders 	
-					WHERE orders.order_id = {$orderId}";
+					WHERE orders.order_id = {$orderId} AND (orders.created_by = {$userId} OR orders.created_by IS NULL)";
 					$result = $connect->query($sql);
 					$data = ($result && $result->num_rows > 0) ? $result->fetch_row() : array_fill(0, 13, '');				
   				?>

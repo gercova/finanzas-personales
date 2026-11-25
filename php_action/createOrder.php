@@ -24,11 +24,12 @@
   		$paymentType 	  = isset($_POST['paymentType']) ? (int)$_POST['paymentType'] : 0;
   		$paymentStatus 	  = isset($_POST['paymentStatus']) ? (int)$_POST['paymentStatus'] : 0;		
 
-		$sql = "INSERT INTO orders (order_date, client_name, client_contact, sub_total, vat, total_amount, discount, grand_total, paid, due, payment_type, payment_status, order_status) 
-		        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "INSERT INTO orders (order_date, client_name, client_contact, sub_total, vat, total_amount, discount, grand_total, paid, due, payment_type, payment_status, order_status, created_by) 
+		        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("sssddddddiii", $orderDate, $clientName, $clientContact, $subTotalValue, $vatValue, $totalAmountValue, $discount, $grandTotalValue, $paid, $dueValue, $paymentType, $paymentStatus);
+			$stmt->bind_param("sssddddddiiii", $orderDate, $clientName, $clientContact, $subTotalValue, $vatValue, $totalAmountValue, $discount, $grandTotalValue, $paid, $dueValue, $paymentType, $paymentStatus, $userId);
 			if($stmt->execute()){
 				$order_id = $connect->insert_id;
 				$valid['order_id'] = $order_id;	

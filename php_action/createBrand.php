@@ -19,10 +19,11 @@
 			exit();
 		}
 
-		$sql = "INSERT INTO brands (brand_name, brand_active, brand_status) VALUES (?, ?, 1)";
+		$userId = (int)$_SESSION['userId'];
+		$sql = "INSERT INTO brands (brand_name, brand_active, brand_status, created_by) VALUES (?, ?, 1, ?)";
 		$stmt = $connect->prepare($sql);
 		if($stmt){
-			$stmt->bind_param("si", $brandName, $brandStatus);
+			$stmt->bind_param("sii", $brandName, $brandStatus, $userId);
 			if($stmt->execute()){
 				$valid['success'] = true;
 				$valid['messages'] = "Fabricante agregado exitosamente.";	

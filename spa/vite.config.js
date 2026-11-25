@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 
 export default defineConfig({
   plugins: [vue()],
-  base: '/spa/dist/',
+  base: './',
   resolve: {
     alias: { '@': import.meta.dirname + '/src' }
   },
@@ -23,8 +23,8 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/php_action': { target: 'http://localhost', changeOrigin: true },
-      '/assests':    { target: 'http://localhost', changeOrigin: true },
+      '/php_action': { target: 'http://localhost/personal-finance', changeOrigin: true },
+      '/assests':    { target: 'http://localhost/personal-finance', changeOrigin: true },
     }
   }
 })

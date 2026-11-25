@@ -5,7 +5,20 @@
       <li class="active">Gastos</li>
     </ol>
 
-    <div id="quota-alert-container"></div>
+    <!-- Spending Quota Alert Banner (matching expense.php) -->
+    <div v-if="spendLimit && spendLimit.monthly_limit > 0" :class="'alert ' + (alertClass || 'alert-info')" style="margin-bottom:15px;">
+      <strong><i class="glyphicon glyphicon-stats"></i> Límite mensual de gastos</strong>
+      &mdash; Has gastado <strong>S/ {{ fmt(monthlySpent) }}</strong>
+      de <strong>S/ {{ fmt(spendLimit.monthly_limit) }}</strong>
+      ({{ quotaPct }}%)
+      <div class="progress" style="margin-top:8px; margin-bottom:0; height:10px;">
+        <div
+          :class="'progress-bar progress-bar-' + quotaBarClass"
+          role="progressbar"
+          :style="{ width: Math.min(quotaPct, 100) + '%', minWidth: '2px' }"
+        ></div>
+      </div>
+    </div>
 
     <div class="panel panel-default">
       <DataTable
@@ -25,7 +38,7 @@
       </DataTable>
     </div>
 
-    <!-- Add -->
+    <!-- Add Modal -->
     <AppModal v-model="showAdd" title="Registrar Gasto" icon="glyphicon-plus-sign"
               header-color="#c0392b" size="lg" @closed="resetForm">
       <template #body>
@@ -42,7 +55,7 @@
       </template>
     </AppModal>
 
-    <!-- Edit -->
+    <!-- Edit Modal -->
     <AppModal v-model="showEdit" title="Editar Gasto" icon="glyphicon-edit"
               header-color="#2980b9" size="lg" @closed="resetForm">
       <template #body>
@@ -65,19 +78,22 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useExpenseStore } from '@/stores/useExpenseStore'
+import { useDashboardStore } from '@/stores/useDashboardStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
 import ImportModal from '@/components/ImportModal.vue'
 import ExpenseForm from '@/components/forms/ExpenseForm.vue'
 import * as api    from '@/api'
 
-const toast    = inject('toast')
-const store    = useExpenseStore()
-const showAdd  = ref(false)
-const showEdit = ref(false)
-const saving   = ref(false)
+const toast          = inject('toast')
+const store          = useExpenseStore()
+const dashboardStore = useDashboardStore()
+
+const showAdd   = ref(false)
+const showEdit  = ref(false)
+const saving    = ref(false)
 const formError = ref('')
 const editId    = ref(null)
 const importRef   = ref(null)
@@ -88,6 +104,57 @@ const accounts   = ref(window.expenseAccounts   || [])
 const categories = ref(window.expenseCategories || [])
 const projects   = ref(window.expenseProjects   || [])
 
+const spendLimit = computed(() => {
+  const kpi = dashboardStore.kpi
+  if (kpi && kpi.monthly_limit > 0) {
+    return {
+      monthly_limit: kpi.monthly_limit,
+      warning_threshold: kpi.warning_threshold || 75,
+      critical_threshold: kpi.critical_threshold || 90
+    }
+  }
+  return null
+})
+
+const monthlySpent = computed(() => {
+  const curMonth = new Date().toISOString().slice(0, 7)
+  let sum = 0
+  for (const r of store.rows) {
+    const dateStr = String(r[4] || '')
+    const amtStr  = String(r[5] || '').replace(/[^0-9.]/g, '')
+    const amt     = parseFloat(amtStr) || 0
+    const parts = dateStr.split('/')
+    if (parts.length === 3) {
+      const ym = `${parts[2]}-${parts[1]}`
+      if (ym === curMonth) sum += amt
+    }
+  }
+  return sum
+})
+
+const quotaPct = computed(() => {
+  if (!spendLimit.value || spendLimit.value.monthly_limit <= 0) return 0
+  return Math.round((monthlySpent.value / spendLimit.value.monthly_limit) * 1000) / 10
+})
+
+const quotaBarClass = computed(() => {
+  if (!spendLimit.value) return 'success'
+  if (quotaPct.value >= spendLimit.value.critical_threshold) return 'danger'
+  if (quotaPct.value >= spendLimit.value.warning_threshold) return 'warning'
+  return 'success'
+})
+
+const alertClass = computed(() => {
+  if (quotaBarClass.value === 'danger') return 'alert-danger'
+  if (quotaBarClass.value === 'warning') return 'alert-warning'
+  return ''
+})
+
+function fmt(n) {
+  const num = parseFloat(n) || 0
+  return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
@@ -97,10 +164,18 @@ async function submitAdd() {
     const fd = addFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.createExpense(fd)
-    if (data.success) { showAdd.value = false; await store.reload(); toast.success(data.messages) }
-    else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
-  finally { saving.value = false }
+    if (data.success) {
+      showAdd.value = false
+      await Promise.all([store.reload(), dashboardStore.reload()])
+      toast.success(data.messages)
+    } else {
+      formError.value = data.messages
+    }
+  } catch {
+    formError.value = 'Error de comunicación.'
+  } finally {
+    saving.value = false
+  }
 }
 
 async function submitEdit() {
@@ -109,10 +184,18 @@ async function submitEdit() {
     const fd = editFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
     const { data } = await api.editExpense(fd)
-    if (data.success) { showEdit.value = false; await store.reload(); toast.success(data.messages) }
-    else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
-  finally { saving.value = false }
+    if (data.success) {
+      showEdit.value = false
+      await Promise.all([store.reload(), dashboardStore.reload()])
+      toast.success(data.messages)
+    } else {
+      formError.value = data.messages
+    }
+  } catch {
+    formError.value = 'Error de comunicación.'
+  } finally {
+    saving.value = false
+  }
 }
 
 async function handleTableAction(e) {
@@ -132,13 +215,17 @@ async function handleTableAction(e) {
     e.preventDefault()
     if (!confirm('¿Eliminar este gasto?')) return
     const { data } = await api.removeExpense(parseInt(el.dataset.id))
-    if (data.success) { await store.reload(); toast.success(data.messages) }
-    else toast.danger(data.messages)
+    if (data.success) {
+      await Promise.all([store.reload(), dashboardStore.reload()])
+      toast.success(data.messages)
+    } else {
+      toast.danger(data.messages)
+    }
   }
 }
 
 onMounted(async () => {
-  await store.load()
+  await Promise.all([store.load(), dashboardStore.load()])
   document.addEventListener('click', handleTableAction)
 })
 

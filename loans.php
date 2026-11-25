@@ -1,4 +1,8 @@
 <?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/loans');
+    exit();
+}
 require_once 'includes/header.php';
 
 $userId = (int)$_SESSION['userId'];

@@ -6,7 +6,7 @@
 	initSecureSession();
 
 	if(isset($_SESSION['userId'])){
-		header('location: dashboard.php');	
+		header('location: app.php');	
 		exit();
 	}
 
@@ -89,7 +89,7 @@
 								$_SESSION['user_agent'] = hash('sha256', isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '');
 								$_SESSION['csrf_token'] = bin2hex(random_bytes(32)); // Rotate CSRF token
 
-								header('location: dashboard.php');	
+								header('location: app.php');	
 								exit();
 							} else {
 								recordLoginAttempt($connect, $username, false);

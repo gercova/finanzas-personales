@@ -5,6 +5,37 @@
       <li class="active">Préstamos</li>
     </ol>
 
+    <!-- Stat cards matching loans.php -->
+    <div class="row" style="margin-bottom:20px;">
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-danger">
+          <div class="panel-heading"><i class="glyphicon glyphicon-share-alt"></i> Total Prestado</div>
+          <div class="panel-body text-center">
+            <h3 style="margin:0;font-weight:700;" class="text-danger">S/ {{ fmt(loanStats.prestado) }}</h3>
+            <small class="text-muted">préstamos activos</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-success">
+          <div class="panel-heading"><i class="glyphicon glyphicon-ok-sign"></i> Total Cobrado</div>
+          <div class="panel-body text-center">
+            <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmt(loanStats.cobrado) }}</h3>
+            <small class="text-muted">recuperado</small>
+          </div>
+        </div>
+      </div>
+      <div class="col-xs-12 col-sm-4">
+        <div class="panel panel-warning">
+          <div class="panel-heading"><i class="glyphicon glyphicon-time"></i> Total Pendiente</div>
+          <div class="panel-body text-center">
+            <h3 style="margin:0;font-weight:700;" class="text-warning">S/ {{ fmt(loanStats.pendiente) }}</h3>
+            <small class="text-muted">por cobrar</small>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div style="margin-bottom:12px;">
       <span class="label" style="background:#e74c3c;padding:4px 10px;">PENDIENTE</span>&nbsp;
       <span class="label" style="background:#f39c12;padding:4px 10px;">PARCIAL</span>&nbsp;
@@ -29,7 +60,7 @@
       </DataTable>
     </div>
 
-    <!-- Add -->
+    <!-- Add Modal -->
     <AppModal v-model="showAdd" title="Registrar Préstamo" icon="glyphicon-plus-sign"
               header-color="#c0392b" size="lg" @closed="resetForm">
       <template #body>
@@ -45,7 +76,7 @@
       </template>
     </AppModal>
 
-    <!-- Edit -->
+    <!-- Edit Modal -->
     <AppModal v-model="showEdit" title="Editar Préstamo" icon="glyphicon-edit"
               header-color="#2980b9" size="lg" @closed="resetForm">
       <template #body>
@@ -61,7 +92,7 @@
       </template>
     </AppModal>
 
-    <!-- Payment -->
+    <!-- Payment Modal -->
     <AppModal v-model="showPay" title="Registrar Pago de Préstamo" icon="glyphicon-usd"
               header-color="#27ae60" @closed="resetForm">
       <template #body>
@@ -86,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, inject, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue'
 import { useLoanStore } from '@/stores/useLoanStore'
 import DataTable   from '@/components/DataTable.vue'
 import AppModal    from '@/components/AppModal.vue'
@@ -110,6 +141,24 @@ const editFormRef = ref(null)
 const payFormRef  = ref(null)
 
 const accounts = ref(window.loanAccounts || [])
+
+const loanStats = computed(() => {
+  let prestado = 0, cobrado = 0, pendiente = 0
+  for (const r of store.rows) {
+    const pStr = String(r[8] || '').replace(/[^0-9.]/g, '')
+    const cStr = String(r[9] || '').replace(/[^0-9.]/g, '')
+    const dStr = String(r[10] || '').replace(/[^0-9.]/g, '')
+    prestado  += parseFloat(pStr) || 0
+    cobrado   += parseFloat(cStr) || 0
+    pendiente += parseFloat(dStr) || 0
+  }
+  return { prestado, cobrado, pendiente }
+})
+
+function fmt(n) {
+  const num = parseFloat(n) || 0
+  return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
 
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
@@ -143,6 +192,7 @@ async function submitPayment() {
   try {
     const fd = payFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos.'; return }
+    fd.append('loan_id', editId.value)
     const { data } = await api.addLoanPayment(fd)
     if (data.success) { showPay.value = false; await store.reload(); toast.success(data.messages) }
     else formError.value = data.messages
@@ -167,26 +217,33 @@ async function handleTableAction(e) {
 
   if (el.classList.contains('remove-loan')) {
     e.preventDefault()
-    if (!confirm('¿Eliminar este préstamo?')) return
+    if (!confirm('¿Eliminar este préstamo? Esta acción no se puede deshacer.')) return
     const { data } = await api.removeLoan(parseInt(el.dataset.id))
+    if (data.success) { await store.reload(); toast.success(data.messages) }
+    else toast.danger(data.messages)
+  }
+
+  if (el.classList.contains('change-status-loan')) {
+    e.preventDefault()
+    const id = parseInt(el.dataset.id)
+    const status = el.dataset.status
+    const { data } = await api.updateLoanStatus(id, status)
     if (data.success) { await store.reload(); toast.success(data.messages) }
     else toast.danger(data.messages)
   }
 
   if (el.classList.contains('pay-loan')) {
     e.preventDefault()
-    payInfo.value = { borrower: el.dataset.borrower, pending: el.dataset.pending }
-    showPay.value = true
-    setTimeout(() => payFormRef.value?.setLoanId(parseInt(el.dataset.id)), 50)
-  }
-
-  if (el.classList.contains('change-status-loan')) {
-    e.preventDefault()
     const id = parseInt(el.dataset.id)
-    const st = el.dataset.status
-    const { data } = await api.updateLoanStatus(id, st)
-    if (data.success) { await store.reload(); toast.success(data.messages) }
-    else toast.danger(data.messages)
+    const { data } = await api.getLoanData(id)
+    if (data.success) {
+      editId.value = id
+      payInfo.value = {
+        borrower: data.data.borrower_name,
+        pending:  data.data.balance_pending,
+      }
+      showPay.value = true
+    }
   }
 }
 

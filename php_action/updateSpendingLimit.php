@@ -1,10 +1,14 @@
 <?php
 require_once 'core.php';
 require_once 'security.php';
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
-verifyCsrfToken();
+if (!verifyCsrfToken()) {
+    echo json_encode(['success' => false, 'messages' => 'Token CSRF inválido. Recargue la página.']);
+    exit;
+}
 
+$userId             = (int)$_SESSION['userId'];
 $month_year         = cleanInput($_POST['month_year'] ?? date('Y-m'));
 $monthly_limit      = (float)($_POST['monthly_limit'] ?? 0);
 $warning_threshold  = (float)($_POST['warning_threshold'] ?? 75);
@@ -15,20 +19,16 @@ if (empty($month_year) || !preg_match('/^\d{4}-\d{2}$/', $month_year) || $monthl
     exit;
 }
 
-$stmt = $connect->prepare(
-    "INSERT INTO spending_limits (month_year, monthly_limit, warning_threshold, critical_threshold)
-     VALUES (?, ?, ?, ?)
-     ON DUPLICATE KEY UPDATE monthly_limit = VALUES(monthly_limit),
-                             warning_threshold = VALUES(warning_threshold),
-                             critical_threshold = VALUES(critical_threshold)"
-);
+$stmt = $connect->prepare("CALL sp_upsert_spending_limit(?, ?, ?, ?, ?)");
 if (!$stmt) {
     echo json_encode(['success' => false, 'messages' => 'Error preparando consulta: ' . $connect->error]);
     exit;
 }
-$stmt->bind_param("sddd", $month_year, $monthly_limit, $warning_threshold, $critical_threshold);
+$stmt->bind_param("isddd", $userId, $month_year, $monthly_limit, $warning_threshold, $critical_threshold);
 
 if ($stmt->execute()) {
+    // Clear results so connection can be reused
+    while ($connect->more_results()) { $connect->next_result(); }
     echo json_encode(['success' => true, 'messages' => 'Límite de gasto mensual actualizado exitosamente.']);
 } else {
     echo json_encode(['success' => false, 'messages' => 'Error al guardar el límite: ' . $stmt->error]);

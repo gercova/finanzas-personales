@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/projects');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 
 <!-- Page header -->
 <div class="row">

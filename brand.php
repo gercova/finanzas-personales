@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/brands');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 <?php include('modal/brandModal.php');?>
 <div class="row">
 	<div class="col-xs-12 col-md-12">

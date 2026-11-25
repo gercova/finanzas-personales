@@ -1,40 +1,42 @@
 <?php
-	require_once 'core.php';
-	$sql = "SELECT categories_id, categories_name, categories_active, categories_status FROM categories WHERE categories_status = 1 AND is_deleted = 0";
-	$result = $connect->query($sql);
-	$output = array('data' => array());
-	if($result->num_rows > 0){
- 		// $row = $result->fetch_array();
- 		$activeCategories = ""; 
- 		while($row = $result->fetch_array()){
- 		$categoriesId = $row[0];
- 			// active 
- 			if($row[2] == 1){
- 				// activate member
- 				$activeCategories = "<label class='label label-success'>Disponible</label>";
- 			}else{
- 				// deactivate member
- 				$activeCategories = "<label class='label label-danger'>No disponible</label>";
- 			}
- 			$button = '
- 				<!-- Single button -->
-				<div class="btn-group">
-	  				<button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-	    				Acción <span class="caret"></span>
-	  				</button>
-	  				<ul class="dropdown-menu">
-	    				<li><a type="button" data-toggle="modal" id="editCategoriesModalBtn" data-target="#editCategoriesModal" onclick="editCategories('.$categoriesId.')"> <i class="glyphicon glyphicon-edit"></i> Editar</a></li>
-	    				<li><a type="button" data-toggle="modal" data-target="#removeCategoriesModal" id="removeCategoriesModalBtn" onclick="removeCategories('.$categoriesId.')"> <i class="glyphicon glyphicon-trash"></i> Eliminar</a></li>       
-	  				</ul>
-				</div>
-			';
- 			$output['data'][] = array( 		
- 				htmlspecialchars($row[1], ENT_QUOTES, 'UTF-8'), 		
- 				$activeCategories,
- 				$button 		
- 			); 	
- 		} // /while 
-	}// if num_rows
-	$connect->close();
-	echo json_encode($output);
-?>
+require_once 'core.php';
+
+$userId = (int)$_SESSION['userId'];
+$sql = "SELECT categories_id, categories_name, categories_active, categories_status FROM categories WHERE categories_status = 1 AND is_deleted = 0 AND (created_by = ? OR created_by IS NULL) ORDER BY categories_id DESC";
+$stmt = $connect->prepare($sql);
+$output = array('data' => array());
+
+if ($stmt) {
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    while ($row = $result->fetch_array()) {
+        $categoriesId = $row[0];
+        if ($row[2] == 1) {
+            $activeCategories = "<label class='label label-success'>Disponible</label>";
+        } else {
+            $activeCategories = "<label class='label label-danger'>No disponible</label>";
+        }
+        $button = '
+            <div class="btn-group">
+                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    Acción <span class="caret"></span>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a type="button" data-toggle="modal" id="editCategoriesModalBtn" data-target="#editCategoriesModal" onclick="editCategories('.$categoriesId.')"> <i class="glyphicon glyphicon-edit"></i> Editar</a></li>
+                    <li><a type="button" data-toggle="modal" data-target="#removeCategoriesModal" id="removeCategoriesModalBtn" onclick="removeCategories('.$categoriesId.')"> <i class="glyphicon glyphicon-trash"></i> Eliminar</a></li>       
+                </ul>
+            </div>
+        ';
+        $output['data'][] = array( 		
+            htmlspecialchars($row[1], ENT_QUOTES, 'UTF-8'), 		
+            $activeCategories,
+            $button 		
+        ); 	
+    }
+    $stmt->close();
+}
+
+$connect->close();
+echo json_encode($output);

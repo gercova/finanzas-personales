@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/reports');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 
 <?php
 $userId       = (int)$_SESSION['userId'];

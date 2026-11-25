@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/accounts');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 <?php require_once 'modal/accountModal.php'; ?>
 
 <div class="row">

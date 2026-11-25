@@ -1,5 +1,11 @@
-<?php require_once 'php_action/db_connect.php' ?>
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/products');
+    exit();
+}
+require_once 'php_action/db_connect.php';
+require_once 'includes/header.php';
+?>
 <?php require_once 'modal/productModal.php'; ?>
 <div class="row">
 	<div class="col-xs-12 col-md-12">

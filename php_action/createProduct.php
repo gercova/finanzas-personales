@@ -51,10 +51,11 @@
 		$targetPath = '../assests/images/stock/' . $newFileName;
 
 		if(is_uploaded_file($tmpFile) && move_uploaded_file($tmpFile, $targetPath)){
-			$sql = "INSERT INTO product (product_name, product_image, brand_id, categories_id, quantity, rate, active, status) VALUES (?, ?, ?, ?, ?, ?, ?, 1)";
+			$userId = (int)$_SESSION['userId'];
+			$sql = "INSERT INTO product (product_name, product_image, brand_id, categories_id, quantity, rate, active, status, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)";
 			$stmt = $connect->prepare($sql);
 			if($stmt){
-				$stmt->bind_param("ssiiddi", $productName, $targetPath, $brandName, $categoryName, $quantity, $rate, $productStatus);
+				$stmt->bind_param("ssiiddii", $productName, $targetPath, $brandName, $categoryName, $quantity, $rate, $productStatus, $userId);
 				if($stmt->execute()){
 					$valid['success'] = true;
 					$valid['messages'] = "Producto creado exitosamente.";	

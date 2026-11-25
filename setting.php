@@ -1,4 +1,10 @@
-<?php require_once 'includes/header.php'; ?>
+<?php
+if (!isset($_GET['classic'])) {
+    header('Location: app.php#/settings');
+    exit();
+}
+require_once 'includes/header.php';
+?>
 <?php 
 	$user_id = (int)$_SESSION['userId'];
 	$stmt = $connect->prepare("SELECT * FROM users WHERE user_id = ?");

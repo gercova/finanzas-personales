@@ -1,30 +1,40 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 
 const routes = [
-  { path: '/',          redirect: '/dashboard' },
-  { path: '/dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Inicio' } },
-  { path: '/income',    component: () => import('@/views/IncomeView.vue'),    meta: { title: 'Ingresos' } },
-  { path: '/expense',   component: () => import('@/views/ExpenseView.vue'),   meta: { title: 'Gastos' } },
-  { path: '/loans',     component: () => import('@/views/LoansView.vue'),     meta: { title: 'Préstamos' } },
-  { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos' } },
-  { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos' } },
-  { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas' } },
-  { path: '/reports',   component: () => import('@/views/ReportsView.vue'),   meta: { title: 'Reportes' } },
-  { path: '/settings',  component: () => import('@/views/SettingsView.vue'),  meta: { title: 'Configuración' } },
+  { path: '/',           redirect: '/dashboard' },
+  { path: '/dashboard',  component: () => import('@/views/DashboardView.vue'),   meta: { title: 'Inicio', navId: 'navDashboard' } },
+  { path: '/income',     component: () => import('@/views/IncomeView.vue'),      meta: { title: 'Ingresos', navId: 'navIncome' } },
+  { path: '/expense',    component: () => import('@/views/ExpenseView.vue'),     meta: { title: 'Gastos', navId: 'navExpense' } },
+  { path: '/loans',      component: () => import('@/views/LoansView.vue'),       meta: { title: 'Préstamos', navId: 'navLoans' } },
+  { path: '/projects',   component: () => import('@/views/ProjectsView.vue'),    meta: { title: 'Proyectos', navId: 'navProjects' } },
+  { path: '/assets',     component: () => import('@/views/AssetsView.vue'),      meta: { title: 'Activos', navId: 'navAssets' } },
+  { path: '/accounts',   component: () => import('@/views/AccountsView.vue'),    meta: { title: 'Cuentas y Categorías', navId: 'navAccounts' } },
+  { path: '/reports',    component: () => import('@/views/ReportsView.vue'),     meta: { title: 'Reportes Financieros', navId: 'navReport' } },
+  { path: '/settings',   component: () => import('@/views/SettingsView.vue'),    meta: { title: 'Configuración', navId: 'navSetting' } },
+  { path: '/brands',     component: () => import('@/views/BrandsView.vue'),      meta: { title: 'Fabricantes', navId: 'navBrands' } },
+  { path: '/categories', component: () => import('@/views/CategoriesView.vue'),  meta: { title: 'Categorías POS', navId: 'navCategories' } },
+  { path: '/products',   component: () => import('@/views/ProductsView.vue'),    meta: { title: 'Productos', navId: 'navProducts' } },
+  { path: '/orders',     component: () => import('@/views/OrdersView.vue'),      meta: { title: 'Órdenes', navId: 'navOrders' } },
 ]
 
 const router = createRouter({
-  // createWebHashHistory uses #/route — no server rewrite needed.
-  // This is the safest choice for a PHP-hosted SPA where the shell page
-  // may be accessed as /app.php or via /app/* rewrites.
-  history: createWebHistory('/app/'),
+  history: createWebHashHistory(),
   routes,
   scrollBehavior: () => ({ top: 0 })
 })
 
 router.afterEach((to) => {
-  const appName = window.__APP_NAME__ || 'myFin'
+  const appName = (typeof window !== 'undefined' && window.__APP_NAME__) || 'myFin'
   document.title = `${to.meta.title || ''} — ${appName}`
+
+  // Synchronize navbar active class in DOM
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('.navbar-nav > li').forEach(li => li.classList.remove('active'))
+    if (to.meta.navId) {
+      const activeEl = document.getElementById(to.meta.navId)
+      if (activeEl) activeEl.classList.add('active')
+    }
+  }
 })
 
 export default router
