@@ -111,9 +111,56 @@ function rowStyle(row) {
 <style>
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.spa-table-row { transition: background .15s; }
-.spa-table-row:hover { filter: brightness(.97); }
+/* Table row styling: Use background-color instead of filter to avoid breaking CSS stacking contexts */
+.spa-table-row {
+  transition: background .15s;
+}
+.spa-table-row:hover > td {
+  background-color: rgba(0, 0, 0, 0.025);
+}
 
-/* Delegate Bootstrap dropdown events to the actual Bootstrap JS on the page */
-.spa-table-row .btn-group .dropdown-menu { z-index: 1050; }
+/* Ensure table cells do not trap or clip dropdown menus */
+.spa-table-row > td {
+  position: static;
+}
+.spa-table-row > td:last-child {
+  position: relative;
+}
+
+/* When a dropdown is open, elevate the row, cell, and button-group above subsequent rows */
+.spa-table-row:has(.btn-group.open),
+.spa-table-row:has(.open),
+.spa-table-row.has-open-dropdown,
+.spa-table-row.row-dropdown-open {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+.spa-table-row:has(.btn-group.open) > td,
+.spa-table-row:has(.open) > td,
+.spa-table-row.has-open-dropdown > td,
+.spa-table-row.row-dropdown-open > td {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+.spa-table-row .btn-group {
+  position: relative;
+}
+
+.spa-table-row .btn-group.open {
+  position: relative !important;
+  z-index: 1055 !important;
+}
+
+.spa-table-row .btn-group.open .dropdown-menu {
+  z-index: 1060 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+}
+
+/* Prevent clipping in table-responsive when dropdown is open */
+.table-responsive:has(.open),
+.table-responsive.has-open-dropdown {
+  overflow: visible !important;
+}
 </style>

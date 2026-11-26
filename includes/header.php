@@ -39,6 +39,40 @@
 			$.fn.modal.Constructor.DEFAULTS.backdrop = 'static';
 			$.fn.modal.Constructor.DEFAULTS.keyboard = false;
 		}
+
+		// Table Dropdowns: Fix z-index stacking and smart auto-dropup across all tables
+		$(document).on('show.bs.dropdown', '.table-responsive .btn-group, .table .btn-group, .spa-table-row .btn-group', function() {
+			var $btnGroup = $(this);
+			var $row = $btnGroup.closest('tr');
+			var $tableResp = $btnGroup.closest('.table-responsive');
+
+			$row.addClass('has-open-dropdown row-dropdown-open');
+			$tableResp.addClass('has-open-dropdown');
+
+			var $menu = $btnGroup.find('.dropdown-menu');
+			var btnOffset = $btnGroup.offset();
+			var btnHeight = $btnGroup.outerHeight() || 24;
+			var menuHeight = $menu.outerHeight() || 190;
+			var windowBottom = $(window).scrollTop() + $(window).height();
+			var spaceBelow = windowBottom - (btnOffset.top + btnHeight);
+			var spaceAbove = btnOffset.top - $(window).scrollTop();
+
+			if (spaceBelow < menuHeight + 10 && spaceAbove > spaceBelow) {
+				$btnGroup.addClass('dropup');
+			} else {
+				$btnGroup.removeClass('dropup');
+			}
+		});
+
+		$(document).on('hidden.bs.dropdown', '.table-responsive .btn-group, .table .btn-group, .spa-table-row .btn-group', function() {
+			var $btnGroup = $(this);
+			var $row = $btnGroup.closest('tr');
+			var $tableResp = $btnGroup.closest('.table-responsive');
+
+			$row.removeClass('has-open-dropdown row-dropdown-open');
+			$tableResp.removeClass('has-open-dropdown');
+			$btnGroup.removeClass('dropup');
+		});
 	</script>
 	<style type="text/css">
 		/* ==============================================================

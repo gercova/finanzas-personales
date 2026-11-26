@@ -329,3 +329,39 @@ img.thumbnail,
     width: 100% !important;
   }
 }
+
+/* ==========================================================================
+   Table Dropdown Stacking Context & Overflow Fix
+   Prevents dropdown menus from being overlapped by subsequent table rows
+   or clipped by .table-responsive containers.
+   ========================================================================== */
+.table-responsive:has(.open),
+.table-responsive.has-open-dropdown {
+  overflow: visible !important;
+}
+
+table tr:has(.btn-group.open),
+table tr:has(.open),
+table tr.has-open-dropdown,
+table tr.row-dropdown-open {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+table tr:has(.btn-group.open) > td,
+table tr:has(.open) > td,
+table tr.has-open-dropdown > td,
+table tr.row-dropdown-open > td {
+  position: relative !important;
+  z-index: 1050 !important;
+}
+
+table .btn-group.open {
+  position: relative !important;
+  z-index: 1055 !important;
+}
+
+table .btn-group.open .dropdown-menu {
+  z-index: 1060 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22) !important;
+}
