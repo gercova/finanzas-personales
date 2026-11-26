@@ -11,6 +11,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
   const incomeCategories  = ref(typeof window !== 'undefined' ? (window.incomeCategories || []) : [])
   const expenseCategories = ref(typeof window !== 'undefined' ? (window.expenseCategories || []) : [])
   const projects          = ref(typeof window !== 'undefined' ? (window.incomeProjects || []) : [])
+  const borrowers         = ref([])
   const loaded            = ref(false)
 
   async function load(force = false) {
@@ -22,6 +23,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
         incomeCategories.value  = data.incomeCategories || []
         expenseCategories.value = data.expenseCategories || []
         projects.value          = data.projects || []
+        borrowers.value         = data.borrowers || []
         loaded.value            = true
 
         if (typeof window !== 'undefined') {
@@ -48,6 +50,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
     incomeCategories,
     expenseCategories,
     projects,
+    borrowers,
     load,
     reload
   }

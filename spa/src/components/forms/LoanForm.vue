@@ -3,9 +3,24 @@
     <div class="row">
       <div class="col-sm-6">
         <div class="form-group">
-          <label>Nombre del Prestatario <span class="text-danger">*</span></label>
-          <input v-model="f.borrower_name" type="text" class="form-control"
-                 placeholder="Ej: Juan Pérez" required>
+          <label>Prestatario <span class="text-danger">*</span></label>
+          <div class="input-group">
+            <select v-model="f.borrower_id" class="form-control" @change="onBorrowerSelect">
+              <option value="">-- Seleccionar Prestatario --</option>
+              <option v-for="b in borrowers" :key="b.id" :value="String(b.id)">
+                {{ b.full_name }} ({{ b.document_type }}: {{ b.document_number }})
+              </option>
+            </select>
+            <span class="input-group-btn">
+              <button class="btn btn-default" type="button" @click="$emit('request-new-borrower')" title="Registrar nuevo prestatario con DNI/RUC">
+                <i class="glyphicon glyphicon-plus text-success"></i> Nuevo
+              </button>
+            </span>
+          </div>
+          <div style="margin-top:5px;">
+            <input v-model="f.borrower_name" type="text" class="form-control"
+                   :placeholder="f.borrower_id ? 'Nombre del prestatario seleccionado' : 'O ingrese nombre manualmente...'" required>
+          </div>
         </div>
       </div>
       <div class="col-sm-6">
@@ -107,19 +122,30 @@
 <script setup>
 import { reactive, computed } from 'vue'
 
-defineProps({
-  accounts: { type: Array, default: () => [] },
-  editId:   { type: Number, default: null }
+const props = defineProps({
+  accounts:  { type: Array, default: () => [] },
+  borrowers: { type: Array, default: () => [] },
+  editId:    { type: Number, default: null }
 })
+
+defineEmits(['request-new-borrower'])
 
 const today = new Date().toISOString().slice(0, 10)
 
 const f = reactive({
   loan_id: '',
-  borrower_name: '', concept: '', account_id: '',
-  loan_date: today, due_date: '', principal_amount: '',
-  interest_type: 'NONE', interest_value: '',
-  total_receivable: '', status: 'PENDIENTE', notes: ''
+  borrower_id: '',
+  borrower_name: '',
+  concept: '',
+  account_id: '',
+  loan_date: today,
+  due_date: '',
+  principal_amount: '',
+  interest_type: 'NONE',
+  interest_value: '',
+  total_receivable: '',
+  status: 'PENDIENTE',
+  notes: ''
 })
 
 const totalReceivable = computed(() => {
@@ -129,6 +155,20 @@ const totalReceivable = computed(() => {
   if (f.interest_type === 'FIXED')      return (p + v).toFixed(2)
   return p.toFixed(2)
 })
+
+function onBorrowerSelect() {
+  if (!f.borrower_id) return
+  const found = props.borrowers.find(b => String(b.id) === String(f.borrower_id))
+  if (found) {
+    f.borrower_name = found.full_name
+  }
+}
+
+function selectBorrower(borrower) {
+  if (!borrower) return
+  f.borrower_id = String(borrower.id || borrower.borrower_id || '')
+  f.borrower_name = borrower.full_name || ''
+}
 
 function onInterestTypeChange() {
   if (f.interest_type === 'NONE') {
@@ -147,6 +187,7 @@ function setData(d) {
   }
   Object.assign(f, {
     loan_id:          d.id || d.loan_id      || '',
+    borrower_id:      d.borrower_id ? String(d.borrower_id) : '',
     borrower_name:    d.borrower_name        || '',
     concept:          d.concept              || '',
     account_id:       d.account_id ? String(d.account_id) : '',
@@ -167,6 +208,7 @@ function getFormData() {
   }
   const fd = new FormData()
   if (f.loan_id) fd.append('loan_id', f.loan_id)
+  if (f.borrower_id) fd.append('borrower_id', f.borrower_id)
   fd.append('borrower_name',    f.borrower_name.trim())
   fd.append('concept',          f.concept.trim())
   fd.append('account_id',       f.account_id)
@@ -183,5 +225,5 @@ function getFormData() {
   return fd
 }
 
-defineExpose({ getFormData, setData })
+defineExpose({ getFormData, setData, selectBorrower })
 </script>

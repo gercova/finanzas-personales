@@ -26,6 +26,14 @@ export const removeLoan          = (id) => http.post('php_action/removeLoan.php'
 export const updateLoanStatus    = (id, s) => http.post('php_action/updateLoanStatus.php', new URLSearchParams({ loan_id: id, status: s }))
 export const addLoanPayment      = (fd) => http.post('php_action/addLoanPayment.php', fd)
 
+// ─── Borrowers (Prestatarios) & Decolecta API ─────────────────────────────────
+export const fetchBorrowers      = ()   => http.get('php_action/fetchBorrowers.php')
+export const getBorrowerData     = (id) => http.get('php_action/getBorrowerData.php', { params: { id } })
+export const createBorrower      = (fd) => http.post('php_action/createBorrower.php', fd)
+export const editBorrower        = (fd) => http.post('php_action/editBorrower.php', fd)
+export const removeBorrower      = (id) => http.post('php_action/removeBorrower.php', new URLSearchParams({ id }))
+export const lookupDecolecta     = (type, number) => http.get('php_action/lookupDecolecta.php', { params: { type, number } })
+
 // ─── Projects ─────────────────────────────────────────────────────────────────
 export const fetchProjects       = ()   => http.get('php_action/fetchProjects.php')
 export const getProjectData      = (id) => http.get('php_action/getProjectData.php', { params: { id } })

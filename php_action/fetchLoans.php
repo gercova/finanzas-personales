@@ -5,13 +5,14 @@ header('Content-Type: application/json');
 $userId = (int)$_SESSION['userId'];
 
 $stmt = $connect->prepare("
-    SELECT l.loan_id AS id, l.borrower_name, l.concept, a.account_name,
+    SELECT l.loan_id AS id, l.borrower_id, l.borrower_name, l.concept, a.account_name,
            l.loan_date, l.due_date, l.principal_amount,
            l.interest_type, l.interest_value, l.total_receivable,
            l.amount_repaid, l.balance_pending, l.status, l.notes,
-           l.account_id
+           l.account_id, b.document_type, b.document_number
     FROM loans l
     LEFT JOIN accounts a ON l.account_id = a.account_id
+    LEFT JOIN borrowers b ON l.borrower_id = b.borrower_id
     WHERE l.created_by = ? AND l.is_deleted = 0
     ORDER BY l.loan_date DESC
 ");
@@ -78,9 +79,14 @@ while ($row = $result->fetch_assoc()) {
         </ul>
       </div>';
 
+    $borrowerDisplay = htmlspecialchars($row['borrower_name']);
+    if (!empty($row['document_number'])) {
+        $borrowerDisplay .= ' <br><small class="text-muted"><span class="label label-info" style="font-size:9px;padding:1px 4px;">' . htmlspecialchars($row['document_type']) . '</span> ' . htmlspecialchars($row['document_number']) . '</small>';
+    }
+
     $data[] = [
         $no++,
-        '<span style="'.htmlspecialchars($rowStyle).'">'.htmlspecialchars($row['borrower_name']).'</span>',
+        '<span style="'.htmlspecialchars($rowStyle).'">'.$borrowerDisplay.'</span>',
         htmlspecialchars($row['concept']),
         htmlspecialchars($row['account_name'] ?? '-'),
         date('d/m/Y', strtotime($row['loan_date'])),

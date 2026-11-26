@@ -1,14 +1,14 @@
 <?php
 /**
  * php_action/getFormOptions.php
- * Returns current user's active dropdown options for modal forms (accounts, financial categories, projects).
+ * Returns current user's active dropdown options for modal forms (accounts, financial categories, projects, borrowers).
  */
 require_once 'core.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $userId = (int)$_SESSION['userId'];
 
-$accounts = $incomeCategories = $expenseCategories = $projects = [];
+$accounts = $incomeCategories = $expenseCategories = $projects = $borrowers = [];
 
 $stmt = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
 if ($stmt) {
@@ -46,10 +46,20 @@ if ($stmt) {
     $stmt->close();
 }
 
+$stmt = $connect->prepare("SELECT borrower_id AS id, full_name, document_type, document_number, phone, address FROM borrowers WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY full_name");
+if ($stmt) {
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($row = $res->fetch_assoc()) $borrowers[] = $row;
+    $stmt->close();
+}
+
 echo json_encode([
     'success'           => true,
     'accounts'          => $accounts,
     'incomeCategories'  => $incomeCategories,
     'expenseCategories' => $expenseCategories,
     'projects'          => $projects,
+    'borrowers'         => $borrowers,
 ], JSON_UNESCAPED_UNICODE);

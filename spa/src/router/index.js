@@ -6,6 +6,7 @@ const routes = [
   { path: '/income',    component: () => import('@/views/IncomeView.vue'),    meta: { title: 'Ingresos', navId: 'navIncome' } },
   { path: '/expense',   component: () => import('@/views/ExpenseView.vue'),   meta: { title: 'Gastos', navId: 'navExpense' } },
   { path: '/loans',     component: () => import('@/views/LoansView.vue'),     meta: { title: 'Préstamos', navId: 'navLoans' } },
+  { path: '/borrowers', component: () => import('@/views/LoansView.vue'),     meta: { title: 'Prestatarios', navId: 'navLoans', tab: 'borrowers' } },
   { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos', navId: 'navProjects' } },
   { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos', navId: 'navAssets' } },
   { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas y Categorías', navId: 'navAccounts' } },
