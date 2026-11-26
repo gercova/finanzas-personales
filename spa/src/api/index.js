@@ -66,6 +66,7 @@ export const removeFinCategory   = (id) => http.post('php_action/removeFinCatego
 export const getDashboardData       = ()   => http.get('php_action/getDashboardData.php')
 export const fetchCalendarEvents    = ()   => http.get('php_action/fetchCalendarEvents.php')
 export const getFinancialReportData = ()   => http.get('php_action/getFinancialReportData.php')
+export const getReportsChartData    = (params) => http.get('php_action/getReportsChartData.php', { params })
 export const getSettingsData        = ()   => http.get('php_action/getSettingsData.php')
 export const updateSpendingLimit    = (fd) => http.post('php_action/updateSpendingLimit.php', fd)
 export const changeUsername         = (fd) => http.post('php_action/changeUsername.php', fd)

@@ -11,7 +11,7 @@
         <i class="glyphicon glyphicon-stats text-info" style="margin-right:6px;"></i> Resumen Financiero Ejecutivo
       </h3>
       <div style="display:inline-flex; gap:6px;">
-        <button class="btn btn-sm btn-default" @click="store.reload()" :disabled="loading">
+        <button class="btn btn-sm btn-default" @click="refreshAll" :disabled="loading">
           <i class="glyphicon glyphicon-refresh" :class="{ 'spin-icon': loading }"></i> Actualizar
         </button>
         <button class="btn btn-sm btn-info" @click="printReport">
@@ -159,6 +159,9 @@
         </div>
       </div>
 
+      <!-- Main Highcharts Bar Chart (Ingresos, Gastos, Préstamos y Proyectos) -->
+      <FinancialBarChart ref="barChartRef" />
+
       <!-- Detail Breakdowns Row -->
       <div class="row">
         <!-- Monthly Expenses Trend (Last 6 Months) -->
@@ -274,10 +277,12 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useReportStore } from '@/stores/useReportStore'
+import FinancialBarChart from '@/components/FinancialBarChart.vue'
 
 const store = useReportStore()
+const barChartRef = ref(null)
 
 const kpi             = computed(() => store.kpi)
 const accounts        = computed(() => store.accounts)
@@ -317,6 +322,11 @@ function fmt(n) {
 
 function printReport() {
   window.print()
+}
+
+async function refreshAll() {
+  await store.reload()
+  barChartRef.value?.fetchChartData()
 }
 
 onMounted(() => {
