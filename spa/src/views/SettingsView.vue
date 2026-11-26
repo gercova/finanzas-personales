@@ -137,28 +137,141 @@
         <form @submit.prevent="submitPassword" class="form-horizontal">
           <div class="form-group">
             <label class="col-sm-3 control-label">Contraseña Actual <span class="text-danger">*</span></label>
-            <div class="col-sm-4">
-              <input type="password" class="form-control" v-model="passwordForm.password" required />
+            <div class="col-sm-5">
+              <div class="input-group">
+                <input
+                  :type="showCurrentPass ? 'text' : 'password'"
+                  class="form-control"
+                  v-model="passwordForm.password"
+                  placeholder="Ingrese su contraseña actual"
+                  autocomplete="current-password"
+                  required
+                />
+                <span class="input-group-btn">
+                  <button
+                    type="button"
+                    class="btn btn-default"
+                    @click="showCurrentPass = !showCurrentPass"
+                    :title="showCurrentPass ? 'Ocultar contraseña' : 'Ver contraseña'"
+                  >
+                    <i :class="showCurrentPass ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+                  </button>
+                </span>
+              </div>
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" :class="{ 'has-warning': passwordForm.npassword && passwordStrength.score < 3, 'has-success': passwordStrength.score >= 3 }">
             <label class="col-sm-3 control-label">Nueva Contraseña <span class="text-danger">*</span></label>
-            <div class="col-sm-4">
-              <input type="password" class="form-control" v-model="passwordForm.npassword" minlength="4" required />
+            <div class="col-sm-5">
+              <div class="input-group">
+                <input
+                  :type="showNewPass ? 'text' : 'password'"
+                  class="form-control"
+                  v-model="passwordForm.npassword"
+                  minlength="8"
+                  placeholder="Mínimo 8 caracteres"
+                  autocomplete="new-password"
+                  required
+                />
+                <span class="input-group-btn">
+                  <button
+                    type="button"
+                    class="btn btn-default"
+                    @click="showNewPass = !showNewPass"
+                    :title="showNewPass ? 'Ocultar contraseña' : 'Ver contraseña'"
+                  >
+                    <i :class="showNewPass ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+                  </button>
+                </span>
+              </div>
+
+              <!-- Password Strength Meter -->
+              <div v-if="passwordForm.npassword" style="margin-top: 10px; background: #fafafa; border: 1px solid #e5e5e5; border-radius: 4px; padding: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 12px; font-weight: 600; color: #555;">Seguridad de la contraseña:</span>
+                  <span :class="['label', passwordStrength.badgeClass]" style="font-size: 11px;">
+                    {{ passwordStrength.label }}
+                  </span>
+                </div>
+                <div class="progress" style="height: 8px; margin-bottom: 8px; background-color: #e0e0e0;">
+                  <div
+                    class="progress-bar"
+                    :class="passwordStrength.barClass"
+                    role="progressbar"
+                    :style="{ width: passwordStrength.percent + '%', transition: 'width 0.3s ease' }"
+                  ></div>
+                </div>
+
+                <!-- Password Rules Checklist -->
+                <ul class="list-unstyled" style="font-size: 11px; margin-bottom: 0; line-height: 1.6;">
+                  <li :class="rules.minLength ? 'text-success' : 'text-muted'">
+                    <i :class="rules.minLength ? 'glyphicon glyphicon-ok' : 'glyphicon glyphicon-remove'" style="margin-right: 4px;"></i>
+                    Mínimo 8 caracteres
+                  </li>
+                  <li :class="rules.hasUpper ? 'text-success' : 'text-muted'">
+                    <i :class="rules.hasUpper ? 'glyphicon glyphicon-ok' : 'glyphicon glyphicon-remove'" style="margin-right: 4px;"></i>
+                    Al menos una letra mayúscula (A-Z)
+                  </li>
+                  <li :class="rules.hasLower ? 'text-success' : 'text-muted'">
+                    <i :class="rules.hasLower ? 'glyphicon glyphicon-ok' : 'glyphicon glyphicon-remove'" style="margin-right: 4px;"></i>
+                    Al menos una letra minúscula (a-z)
+                  </li>
+                  <li :class="rules.hasNumber ? 'text-success' : 'text-muted'">
+                    <i :class="rules.hasNumber ? 'glyphicon glyphicon-ok' : 'glyphicon glyphicon-remove'" style="margin-right: 4px;"></i>
+                    Al menos un número (0-9)
+                  </li>
+                  <li :class="rules.hasSpecial ? 'text-success' : 'text-muted'">
+                    <i :class="rules.hasSpecial ? 'glyphicon glyphicon-ok' : 'glyphicon glyphicon-remove'" style="margin-right: 4px;"></i>
+                    Al menos un carácter especial (@, #, $, %, !, *, ?, &amp;, etc.)
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" :class="{ 'has-error': passwordMismatch, 'has-success': passwordMatch }">
             <label class="col-sm-3 control-label">Confirmar Contraseña <span class="text-danger">*</span></label>
-            <div class="col-sm-4">
-              <input type="password" class="form-control" v-model="passwordForm.cpassword" minlength="4" required />
+            <div class="col-sm-5">
+              <div class="input-group">
+                <input
+                  :type="showConfirmPass ? 'text' : 'password'"
+                  class="form-control"
+                  v-model="passwordForm.cpassword"
+                  minlength="8"
+                  placeholder="Repita la nueva contraseña"
+                  autocomplete="new-password"
+                  required
+                />
+                <span class="input-group-btn">
+                  <button
+                    type="button"
+                    class="btn btn-default"
+                    @click="showConfirmPass = !showConfirmPass"
+                    :title="showConfirmPass ? 'Ocultar contraseña' : 'Ver contraseña'"
+                  >
+                    <i :class="showConfirmPass ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+                  </button>
+                </span>
+              </div>
+
+              <!-- Match / Mismatch Feedback -->
+              <div v-if="passwordMatch" class="text-success" style="margin-top: 6px; font-size: 12px; font-weight: 600;">
+                <i class="glyphicon glyphicon-ok"></i> Las contraseñas coinciden correctamente.
+              </div>
+              <div v-else-if="passwordMismatch" class="text-danger" style="margin-top: 6px; font-size: 12px; font-weight: 600;">
+                <i class="glyphicon glyphicon-remove"></i> Las contraseñas no coinciden.
+              </div>
             </div>
           </div>
 
           <div class="form-group">
             <div class="col-sm-offset-3 col-sm-9">
-              <button type="submit" class="btn btn-warning" :disabled="savingPassword">
+              <button
+                type="submit"
+                class="btn btn-warning"
+                :disabled="savingPassword || !canSubmitPassword"
+              >
                 <i class="glyphicon glyphicon-refresh"></i>
                 {{ savingPassword ? 'Guardando…' : 'Cambiar Contraseña' }}
               </button>
@@ -203,6 +316,106 @@ const passwordForm = reactive({
   password: '',
   npassword: '',
   cpassword: ''
+})
+
+const showCurrentPass = ref(false)
+const showNewPass     = ref(false)
+const showConfirmPass = ref(false)
+
+const rules = computed(() => {
+  const p = passwordForm.npassword || ''
+  return {
+    minLength: p.length >= 8,
+    hasUpper: /[A-Z]/.test(p),
+    hasLower: /[a-z]/.test(p),
+    hasNumber: /[0-9]/.test(p),
+    hasSpecial: /[^A-Za-z0-9]/.test(p)
+  }
+})
+
+const passwordStrength = computed(() => {
+  const p = passwordForm.npassword || ''
+  if (!p) {
+    return {
+      score: 0,
+      percent: 0,
+      label: 'Sin ingresar',
+      barClass: '',
+      badgeClass: 'label-default'
+    }
+  }
+
+  let score = 0
+  if (rules.value.minLength) score++
+  if (rules.value.hasUpper) score++
+  if (rules.value.hasLower) score++
+  if (rules.value.hasNumber) score++
+  if (rules.value.hasSpecial) score++
+
+  if (score <= 1) {
+    return {
+      score,
+      percent: Math.max(15, Math.min(25, (p.length / 8) * 20)),
+      label: 'Muy Débil',
+      barClass: 'progress-bar-danger',
+      badgeClass: 'label-danger'
+    }
+  } else if (score === 2) {
+    return {
+      score,
+      percent: 40,
+      label: 'Débil',
+      barClass: 'progress-bar-warning',
+      badgeClass: 'label-warning'
+    }
+  } else if (score === 3) {
+    return {
+      score,
+      percent: 60,
+      label: 'Aceptable',
+      barClass: 'progress-bar-info',
+      badgeClass: 'label-info'
+    }
+  } else if (score === 4) {
+    return {
+      score,
+      percent: 80,
+      label: 'Fuerte',
+      barClass: 'progress-bar-primary',
+      badgeClass: 'label-primary'
+    }
+  } else {
+    return {
+      score,
+      percent: 100,
+      label: 'Muy Segura',
+      barClass: 'progress-bar-success',
+      badgeClass: 'label-success'
+    }
+  }
+})
+
+const passwordMatch = computed(() => {
+  return (
+    passwordForm.npassword.length >= 8 &&
+    passwordForm.cpassword.length > 0 &&
+    passwordForm.npassword === passwordForm.cpassword
+  )
+})
+
+const passwordMismatch = computed(() => {
+  return (
+    passwordForm.cpassword.length > 0 &&
+    passwordForm.npassword !== passwordForm.cpassword
+  )
+})
+
+const canSubmitPassword = computed(() => {
+  return (
+    passwordForm.password.trim().length > 0 &&
+    passwordForm.npassword.length >= 8 &&
+    passwordForm.npassword === passwordForm.cpassword
+  )
 })
 
 function fmt(n) {
@@ -259,6 +472,14 @@ async function submitUsername() {
 }
 
 async function submitPassword() {
+  if (!passwordForm.password) {
+    toast.warning('Debe ingresar su contraseña actual.')
+    return
+  }
+  if (passwordForm.npassword.length < 8) {
+    toast.warning('La nueva contraseña debe tener al menos 8 caracteres.')
+    return
+  }
   if (passwordForm.npassword !== passwordForm.cpassword) {
     toast.warning('La nueva contraseña y la confirmación no coinciden.')
     return
@@ -275,6 +496,9 @@ async function submitPassword() {
       passwordForm.password = ''
       passwordForm.npassword = ''
       passwordForm.cpassword = ''
+      showCurrentPass.value = false
+      showNewPass.value = false
+      showConfirmPass.value = false
     } else {
       toast.danger(data.messages)
     }

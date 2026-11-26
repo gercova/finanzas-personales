@@ -169,22 +169,53 @@ require_once 'includes/header.php';
 
 						<div class="form-group">
 					    	<label for="password" class="col-sm-2 control-label">Contraseña actual</label>
-					    	<div class="col-sm-10">
-					      		<input type="password" class="form-control" id="password" name="password" placeholder="Contraseña actual">
+					    	<div class="col-sm-6">
+					      		<div class="input-group">
+					      			<input type="password" class="form-control" id="password" name="password" placeholder="Contraseña actual" autocomplete="current-password">
+					      			<span class="input-group-btn">
+					      				<button class="btn btn-default toggle-password-visibility" type="button" data-target="#password" title="Mostrar/Ocultar contraseña">
+					      					<i class="glyphicon glyphicon-eye-open"></i>
+					      				</button>
+					      			</span>
+					      		</div>
 					    	</div>
 					  	</div>
 
 						<div class="form-group">
 					    	<label for="npassword" class="col-sm-2 control-label">Nueva contraseña</label>
-					    	<div class="col-sm-10">
-					      		<input type="password" class="form-control" id="npassword" name="npassword" placeholder="Nueva contraseña">
+					    	<div class="col-sm-6">
+					      		<div class="input-group">
+					      			<input type="password" class="form-control" id="npassword" name="npassword" placeholder="Nueva contraseña (mínimo 8 caracteres)" autocomplete="new-password">
+					      			<span class="input-group-btn">
+					      				<button class="btn btn-default toggle-password-visibility" type="button" data-target="#npassword" title="Mostrar/Ocultar contraseña">
+					      					<i class="glyphicon glyphicon-eye-open"></i>
+					      				</button>
+					      			</span>
+					      		</div>
+					      		<div id="password-strength-container" style="display:none; margin-top:8px;">
+					      			<div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:4px;">
+					      				<span>Seguridad:</span>
+					      				<span id="password-strength-label" class="label label-default"></span>
+					      			</div>
+					      			<div class="progress" style="height:8px; margin-bottom:5px;">
+					      				<div id="password-strength-bar" class="progress-bar" role="progressbar" style="width:0%;"></div>
+					      			</div>
+					      		</div>
 					    	</div>
 					  	</div>
 
 					  	<div class="form-group">
 					    	<label for="cpassword" class="col-sm-2 control-label">Confirmar contraseña</label>
-					    	<div class="col-sm-10">
-					      		<input type="password" class="form-control" id="cpassword" name="cpassword" placeholder="Confirmar contraseña">
+					    	<div class="col-sm-6">
+					      		<div class="input-group">
+					      			<input type="password" class="form-control" id="cpassword" name="cpassword" placeholder="Confirmar contraseña" autocomplete="new-password">
+					      			<span class="input-group-btn">
+					      				<button class="btn btn-default toggle-password-visibility" type="button" data-target="#cpassword" title="Mostrar/Ocultar contraseña">
+					      					<i class="glyphicon glyphicon-eye-open"></i>
+					      				</button>
+					      			</span>
+					      		</div>
+					      		<div id="password-match-status" style="margin-top:5px; font-size:12px; font-weight:600;"></div>
 					    	</div>
 					  	</div>
 

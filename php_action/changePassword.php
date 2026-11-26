@@ -24,6 +24,12 @@
 			exit();
 		}
 
+		if(strlen($newPassword) < 8){
+			$valid['messages'] = "La nueva contraseña debe tener al menos 8 caracteres.";
+			echo json_encode($valid);
+			exit();
+		}
+
 		if($newPassword !== $conformPassword){
 			$valid['messages'] = "La nueva contraseña no coincide con la confirmación.";
 			echo json_encode($valid);
