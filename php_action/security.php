@@ -94,6 +94,28 @@ function getRequestData(): array {
 }
 
 /**
+ * Fetch a system setting value from system_settings if the table exists, else fallback.
+ */
+function getSystemSetting(mysqli $connect, string $key, string $default = ''): string {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        $chk = @$connect->query("SHOW TABLES LIKE 'system_settings'");
+        if ($chk && $chk->num_rows > 0) {
+            $res = @$connect->query("SELECT setting_key, setting_value FROM `system_settings`");
+            if ($res) {
+                while ($r = $res->fetch_assoc()) {
+                    $cache[$r['setting_key']] = (string)($r['setting_value'] ?? '');
+                }
+                $res->free();
+            }
+        }
+        if ($chk) $chk->free();
+    }
+    return array_key_exists($key, $cache) && $cache[$key] !== '' ? $cache[$key] : $default;
+}
+
+/**
  * Fetch current user's header KPI metrics (month income & today's expenses)
  */
 function fetchHeaderMetrics(mysqli $connect, int $userId): array {

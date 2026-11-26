@@ -13,8 +13,9 @@ const routes = [
   { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos' } },
   { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos' } },
   { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas y Categorías' } },
-  { path: '/reports',   component: () => import('@/views/ReportsView.vue'),   meta: { title: 'Reportes Financieros' } },
-  { path: '/settings',  component: () => import('@/views/SettingsView.vue'),  meta: { title: 'Configuración' } },
+  { path: '/reports',       component: () => import('@/views/ReportsView.vue'),      meta: { title: 'Reportes Financieros' } },
+  { path: '/settings',      component: () => import('@/views/SettingsView.vue'),     meta: { title: 'Configuración' } },
+  { path: '/system-config', component: () => import('@/views/SystemConfigView.vue'), meta: { title: 'Configuración General del Sistema', requiresAdmin: true } },
   { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
@@ -36,6 +37,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly && isAuth) {
+    return { path: '/dashboard' }
+  }
+
+  if (to.meta.requiresAdmin && !authStore.isAdmin) {
     return { path: '/dashboard' }
   }
 

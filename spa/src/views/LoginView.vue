@@ -72,13 +72,15 @@
                   </div>
                 </div>
 
-                <hr style="margin:15px 0;" />
-                <div class="text-center">
-                  <span class="text-muted">¿No tienes una cuenta?</span>
-                  <router-link to="/register" class="btn btn-link" style="padding:0 4px;font-weight:600;">
-                    Regístrate aquí
-                  </router-link>
-                </div>
+                <template v-if="authStore.allowRegistration">
+                  <hr style="margin:15px 0;" />
+                  <div class="text-center">
+                    <span class="text-muted">¿No tienes una cuenta?</span>
+                    <router-link to="/register" class="btn btn-link" style="padding:0 4px;font-weight:600;">
+                      Regístrate aquí
+                    </router-link>
+                  </div>
+                </template>
               </fieldset>
             </form>
           </div>

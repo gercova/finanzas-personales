@@ -27,12 +27,16 @@ if ($authenticated) {
     $headerMetrics = fetchHeaderMetrics($connect, $userId);
 }
 
+$appName = getSystemSetting($connect, 'app_name', env('APP_NAME', 'myFin'));
+$allowRegistration = getSystemSetting($connect, 'allow_user_registration', '1') === '1';
+
 echo json_encode([
-    'success'        => true,
-    'authenticated'  => $authenticated,
-    'reason'         => $reason,
-    'app_name'       => env('APP_NAME', 'myFin'),
-    'csrf_token'     => $csrfToken,
-    'user'           => $user,
-    'header_metrics' => $headerMetrics,
+    'success'            => true,
+    'authenticated'      => $authenticated,
+    'reason'             => $reason,
+    'app_name'           => $appName,
+    'allow_registration' => $allowRegistration,
+    'csrf_token'         => $csrfToken,
+    'user'               => $user,
+    'header_metrics'     => $headerMetrics,
 ], JSON_UNESCAPED_UNICODE);

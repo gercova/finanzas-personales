@@ -33,6 +33,15 @@ if (!verifyCsrfToken($token)) {
     exit();
 }
 
+if (getSystemSetting($connect, 'allow_user_registration', '1') !== '1') {
+    http_response_code(403);
+    echo json_encode([
+        'success'  => false,
+        'messages' => 'El registro de nuevos usuarios se encuentra deshabilitado por el administrador.'
+    ], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
 $errors = [];
 if ($fullName === '' || mb_strlen($fullName) < 2) {
     $errors[] = 'El nombre completo debe tener al menos 2 caracteres.';

@@ -70,7 +70,7 @@
           <li
             ref="userMenuRef"
             class="dropdown"
-            :class="{ open: userMenuOpen, active: route.path === '/accounts' || route.path === '/settings' }"
+            :class="{ open: userMenuOpen, active: route.path === '/accounts' || route.path === '/settings' || route.path === '/system-config' }"
           >
             <a
               href="#"
@@ -83,6 +83,7 @@
             <ul class="dropdown-menu">
               <li class="dropdown-header">
                 Usuario: <strong>{{ authStore.user?.username || 'admin' }}</strong>
+                <span v-if="authStore.isAdmin" class="label label-danger" style="font-size:9px;margin-left:4px;">ADMIN</span>
               </li>
               <li role="separator" class="divider"></li>
               <li :class="{ active: route.path === '/accounts' }">
@@ -93,6 +94,11 @@
               <li :class="{ active: route.path === '/settings' }">
                 <router-link to="/settings" @click="closeMenus">
                   <i class="glyphicon glyphicon-wrench"></i> Configuración
+                </router-link>
+              </li>
+              <li v-if="authStore.isAdmin" :class="{ active: route.path === '/system-config' }">
+                <router-link to="/system-config" @click="closeMenus">
+                  <i class="glyphicon glyphicon-cog text-danger"></i> Configuración General (Admin)
                 </router-link>
               </li>
               <li role="separator" class="divider"></li>

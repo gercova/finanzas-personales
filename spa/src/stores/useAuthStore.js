@@ -1,18 +1,26 @@
 import { defineStore } from 'pinia'
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import * as api from '@/api'
 import { setCsrfToken } from '@/api/http'
 import { cacheDelAll } from './cache'
 
 export const useAuthStore = defineStore('auth', () => {
-  const authenticated  = ref(false)
-  const sessionChecked = ref(false)
-  const appName        = ref('myFin')
-  const user           = ref(null)
-  const sessionReason  = ref(null)
-  const headerMetrics  = reactive({
+  const authenticated     = ref(false)
+  const sessionChecked    = ref(false)
+  const appName           = ref('myFin')
+  const allowRegistration = ref(true)
+  const user              = ref(null)
+  const sessionReason     = ref(null)
+  const headerMetrics     = reactive({
     month_income: 0,
     today_expenses: 0,
+  })
+
+  const isAdmin = computed(() => {
+    if (!authenticated.value || !user.value) return false
+    const role = String(user.value.role || '').toUpperCase()
+    const uname = String(user.value.username || '').toLowerCase()
+    return role === 'ADMIN' || uname === 'admin'
   })
 
   let pendingSessionPromise = null
@@ -26,6 +34,9 @@ export const useAuthStore = defineStore('auth', () => {
         const { data } = await api.getSession()
         if (data?.csrf_token) setCsrfToken(data.csrf_token)
         if (data?.app_name)   appName.value = data.app_name
+        if (typeof data?.allow_registration === 'boolean') {
+          allowRegistration.value = data.allow_registration
+        }
         authenticated.value = Boolean(data?.authenticated)
         user.value          = data?.user || null
         sessionReason.value = data?.reason || null
@@ -123,10 +134,16 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  function setAppName(newName) {
+    if (newName) appName.value = newName
+  }
+
   return {
     authenticated,
     sessionChecked,
     appName,
+    allowRegistration,
+    isAdmin,
     user,
     sessionReason,
     headerMetrics,
@@ -137,5 +154,6 @@ export const useAuthStore = defineStore('auth', () => {
     clearSessionState,
     refreshHeaderMetrics,
     setUsername,
+    setAppName,
   }
 })

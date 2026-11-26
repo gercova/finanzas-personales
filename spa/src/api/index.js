@@ -79,6 +79,12 @@ export const updateSpendingLimit    = (fd)     => http.post('php_action/updateSp
 export const changeUsername         = (fd)     => http.post('php_action/changeUsername.php', fd)
 export const changePassword         = (fd)     => http.post('php_action/changePassword.php', fd)
 
+// ─── Admin System Configuration & Database Migrations ─────────────────────────
+export const adminGetSystemConfig       = ()   => http.get('php_action/adminGetSystemConfig.php')
+export const adminUpdateSystemSettings  = (fd) => http.post('php_action/adminUpdateSystemSettings.php', fd)
+export const adminRunMigrations         = (fd) => http.post('php_action/adminRunMigrations.php', fd)
+export const adminIntegrateMigration    = (fd) => http.post('php_action/adminIntegrateMigration.php', fd)
+
 // ─── Bulk import & templates ──────────────────────────────────────────────────
 export const bulkImport             = (fd)     => http.post('php_action/bulkImport.php', fd)
 export const templateUrl            = (module) => `${getBaseURL()}php_action/downloadTemplate.php?module=${encodeURIComponent(module)}&csrf_token=${encodeURIComponent(getCsrfToken())}`

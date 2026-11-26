@@ -78,6 +78,15 @@ if ($passwordCheck !== true && $passwordCheck !== 'rehash_needed') {
     exit();
 }
 
+$isUserAdmin = (strtoupper((string)($user['role'] ?? 'USER')) === 'ADMIN') || (strtolower((string)$user['username']) === 'admin');
+if (!$isUserAdmin && getSystemSetting($connect, 'maintenance_mode', '0') === '1') {
+    echo json_encode([
+        'success'  => false,
+        'messages' => 'El sistema se encuentra temporalmente en modo mantenimiento. Solo el administrador puede iniciar sesión.'
+    ], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
 if ($passwordCheck === 'rehash_needed') {
     $newSha256 = hashPassword($password);
     $upgradeStmt = $connect->prepare("UPDATE users SET password = ? WHERE user_id = ?");
