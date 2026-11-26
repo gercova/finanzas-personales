@@ -21,18 +21,17 @@ Options -Indexes
     Header set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# ── Vue 3 SPA history-mode routing ──────────────────────────────────────────
-# All requests under /app/* are rewritten to app.php (the SPA shell).
-# PHP API endpoints, static files, and real directories are served directly.
+# ── Vue 3 SPA routing ───────────────────────────────────────────────────────
+# PHP API endpoints (php_action/*) and static assets are served directly.
+# Any SPA deep-link (/app/*) or legacy MPA URL routes to the pure SPA shell.
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Pass real files and directories straight through
+    RewriteRule ^(dashboard|income|expense|loans|projects|assets|accounts|finance_report|setting|register|logout)\.php$ app.php [L,QSA]
+
     RewriteCond %{REQUEST_FILENAME} -f [OR]
     RewriteCond %{REQUEST_FILENAME} -d
     RewriteRule ^ - [L]
 
-    # Rewrite every /app/* deep-link to the SPA shell
-    # This covers /app/, /app/income, /app/loans, etc.
     RewriteRule ^app(/.*)?$ app.php [L,QSA]
 </IfModule>

@@ -7,6 +7,3 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.mount('#app')
-
-// Expose router for the PHP shell's spaNav() helper
-window.__vueRouter = router

@@ -1,17 +1,21 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const routes = [
   { path: '/',          redirect: '/dashboard' },
-  { path: '/dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Inicio', navId: 'navDashboard' } },
-  { path: '/income',    component: () => import('@/views/IncomeView.vue'),    meta: { title: 'Ingresos', navId: 'navIncome' } },
-  { path: '/expense',   component: () => import('@/views/ExpenseView.vue'),   meta: { title: 'Gastos', navId: 'navExpense' } },
-  { path: '/loans',     component: () => import('@/views/LoansView.vue'),     meta: { title: 'Préstamos', navId: 'navLoans' } },
-  { path: '/borrowers', component: () => import('@/views/LoansView.vue'),     meta: { title: 'Prestatarios', navId: 'navLoans', tab: 'borrowers' } },
-  { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos', navId: 'navProjects' } },
-  { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos', navId: 'navAssets' } },
-  { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas y Categorías', navId: 'navAccounts' } },
-  { path: '/reports',   component: () => import('@/views/ReportsView.vue'),   meta: { title: 'Reportes Financieros', navId: 'navReport' } },
-  { path: '/settings',  component: () => import('@/views/SettingsView.vue'),  meta: { title: 'Configuración', navId: 'navSetting' } },
+  { path: '/login',     component: () => import('@/views/LoginView.vue'),     meta: { title: 'Ingreso', guestOnly: true, hideNavbar: true } },
+  { path: '/register',  component: () => import('@/views/RegisterView.vue'),  meta: { title: 'Registro', guestOnly: true, hideNavbar: true } },
+  { path: '/dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Inicio' } },
+  { path: '/income',    component: () => import('@/views/IncomeView.vue'),    meta: { title: 'Ingresos' } },
+  { path: '/expense',   component: () => import('@/views/ExpenseView.vue'),   meta: { title: 'Gastos' } },
+  { path: '/loans',     component: () => import('@/views/LoansView.vue'),     meta: { title: 'Préstamos' } },
+  { path: '/borrowers', component: () => import('@/views/LoansView.vue'),     meta: { title: 'Prestatarios', tab: 'borrowers' } },
+  { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos' } },
+  { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos' } },
+  { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas y Categorías' } },
+  { path: '/reports',   component: () => import('@/views/ReportsView.vue'),   meta: { title: 'Reportes Financieros' } },
+  { path: '/settings',  component: () => import('@/views/SettingsView.vue'),  meta: { title: 'Configuración' } },
+  { path: '/:pathMatch(.*)*', redirect: '/dashboard' },
 ]
 
 const router = createRouter({
@@ -20,18 +24,28 @@ const router = createRouter({
   scrollBehavior: () => ({ top: 0 })
 })
 
-router.afterEach((to) => {
-  const appName = (typeof window !== 'undefined' && window.__APP_NAME__) || 'myFin'
-  document.title = `${to.meta.title || ''} — ${appName}`
+router.beforeEach(async (to) => {
+  const authStore = useAuthStore()
+  const isAuth = await authStore.ensureSession()
 
-  // Synchronize navbar active class in DOM
-  if (typeof document !== 'undefined') {
-    document.querySelectorAll('.navbar-nav > li').forEach(li => li.classList.remove('active'))
-    if (to.meta.navId) {
-      const activeEl = document.getElementById(to.meta.navId)
-      if (activeEl) activeEl.classList.add('active')
+  if (!to.meta.guestOnly && !isAuth) {
+    return {
+      path: '/login',
+      query: to.fullPath && to.fullPath !== '/dashboard' ? { redirect: to.fullPath } : {}
     }
   }
+
+  if (to.meta.guestOnly && isAuth) {
+    return { path: '/dashboard' }
+  }
+
+  return true
+})
+
+router.afterEach((to) => {
+  const authStore = useAuthStore()
+  const appName = authStore.appName || 'myFin'
+  document.title = to.meta.title ? `${to.meta.title} — ${appName}` : appName
 })
 
 export default router

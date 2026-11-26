@@ -1,4 +1,11 @@
-import http, { getBaseURL } from './http'
+import http, { getBaseURL, getCsrfToken } from './http'
+
+// ─── Auth & Session ───────────────────────────────────────────────────────────
+export const getSession          = ()     => http.get('php_action/authSession.php')
+export const login               = (data) => http.post('php_action/authLogin.php', data)
+export const register            = (data) => http.post('php_action/authRegister.php', data)
+export const logout              = ()     => http.post('php_action/authLogout.php')
+export const getHeaderMetrics    = ()     => http.get('php_action/getHeaderMetrics.php')
 
 // ─── Form Options (Dropdowns) ─────────────────────────────────────────────────
 export const getFormOptions      = ()   => http.get('php_action/getFormOptions.php')
@@ -63,15 +70,16 @@ export const editFinCategory     = (fd) => http.post('php_action/editFinCategory
 export const removeFinCategory   = (id) => http.post('php_action/removeFinCategory.php', new URLSearchParams({ category_id: id }))
 
 // ─── Dashboard & Reports & Settings ───────────────────────────────────────────
-export const getDashboardData       = ()   => http.get('php_action/getDashboardData.php')
-export const fetchCalendarEvents    = ()   => http.get('php_action/fetchCalendarEvents.php')
-export const getFinancialReportData = ()   => http.get('php_action/getFinancialReportData.php')
+export const getDashboardData       = ()       => http.get('php_action/getDashboardData.php')
+export const fetchCalendarEvents    = ()       => http.get('php_action/fetchCalendarEvents.php')
+export const getFinancialReportData = ()       => http.get('php_action/getFinancialReportData.php')
 export const getReportsChartData    = (params) => http.get('php_action/getReportsChartData.php', { params })
-export const getSettingsData        = ()   => http.get('php_action/getSettingsData.php')
-export const updateSpendingLimit    = (fd) => http.post('php_action/updateSpendingLimit.php', fd)
-export const changeUsername         = (fd) => http.post('php_action/changeUsername.php', fd)
-export const changePassword         = (fd) => http.post('php_action/changePassword.php', fd)
+export const getSettingsData        = ()       => http.get('php_action/getSettingsData.php')
+export const updateSpendingLimit    = (fd)     => http.post('php_action/updateSpendingLimit.php', fd)
+export const changeUsername         = (fd)     => http.post('php_action/changeUsername.php', fd)
+export const changePassword         = (fd)     => http.post('php_action/changePassword.php', fd)
 
 // ─── Bulk import & templates ──────────────────────────────────────────────────
 export const bulkImport             = (fd)     => http.post('php_action/bulkImport.php', fd)
-export const templateUrl            = (module) => `${getBaseURL()}php_action/downloadTemplate.php?module=${module}&csrf_token=${encodeURIComponent(window.systemCsrfToken || '')}`
+export const templateUrl            = (module) => `${getBaseURL()}php_action/downloadTemplate.php?module=${encodeURIComponent(module)}&csrf_token=${encodeURIComponent(getCsrfToken())}`
+export const assetUrl               = (path)   => path ? `${getBaseURL()}${String(path).replace(/^\/+/, '')}` : ''

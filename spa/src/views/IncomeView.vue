@@ -11,7 +11,7 @@
         <div class="panel panel-success">
           <div class="panel-heading"><i class="glyphicon glyphicon-calendar"></i> Ingresos del Mes</div>
           <div class="panel-body text-center">
-            <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmt(stats.month) }}</h3>
+            <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmtMoney(stats.month) }}</h3>
             <small class="text-muted">{{ monthLabel }}</small>
           </div>
         </div>
@@ -20,7 +20,7 @@
         <div class="panel panel-info">
           <div class="panel-heading"><i class="glyphicon glyphicon-stats"></i> Ingresos del Año</div>
           <div class="panel-body text-center">
-            <h3 style="margin:0;font-weight:700;" class="text-info">S/ {{ fmt(stats.year) }}</h3>
+            <h3 style="margin:0;font-weight:700;" class="text-info">S/ {{ fmtMoney(stats.year) }}</h3>
             <small class="text-muted">{{ new Date().getFullYear() }}</small>
           </div>
         </div>
@@ -41,7 +41,7 @@
       <DataTable
         title="Gestión de Ingresos"
         icon="glyphicon-arrow-up text-success"
-        :headers="['#','Concepto','Cuenta','Categoría','Proyecto','Fecha','Monto','Estado','Acción']"
+        :columns="columns"
         :store="store"
       >
         <template #actions>
@@ -52,6 +52,26 @@
             <i class="glyphicon glyphicon-plus-sign"></i> Registrar Ingreso
           </button>
         </template>
+
+        <template #cell-concept="{ row }">
+          {{ row.concept }}
+          <i v-if="row.is_recurring" class="glyphicon glyphicon-repeat text-info" title="Recurrente" style="margin-left:4px;"></i>
+        </template>
+        <template #cell-account_name="{ row }">{{ row.account_name || '-' }}</template>
+        <template #cell-category_name="{ row }">{{ row.category_name || '-' }}</template>
+        <template #cell-project_name="{ row }">{{ row.project_name || '-' }}</template>
+        <template #cell-income_date="{ row }">{{ fmtDate(row.income_date) }}</template>
+        <template #cell-amount="{ row }">S/ {{ fmtMoney(row.amount) }}</template>
+        <template #cell-status="{ row }">
+          <span :class="'label label-' + statusBadgeClass(row.status)">{{ statusLabel(row.status) }}</span>
+        </template>
+        <template #cell-actions="{ row }">
+          <ActionDropdown label="">
+            <li><a href="#" @click.prevent="editIncome(row.id)"><i class="glyphicon glyphicon-edit"></i> Editar</a></li>
+            <li class="divider"></li>
+            <li><a href="#" @click.prevent="removeIncome(row.id)"><i class="glyphicon glyphicon-trash text-danger"></i> Eliminar</a></li>
+          </ActionDropdown>
+        </template>
       </DataTable>
     </div>
 
@@ -60,8 +80,7 @@
               header-color="#27ae60" size="lg" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <IncomeForm ref="addFormRef"
-          :accounts="accounts" :categories="categories" :projects="projects" />
+        <IncomeForm ref="addFormRef" :accounts="accounts" :categories="categories" :projects="projects" />
       </template>
       <template #footer>
         <button class="btn btn-default" @click="showAdd = false">Cancelar</button>
@@ -77,9 +96,7 @@
               header-color="#2980b9" size="lg" @closed="resetForm">
       <template #body>
         <div v-if="formError" class="alert alert-danger">{{ formError }}</div>
-        <IncomeForm ref="editFormRef"
-          :accounts="accounts" :categories="categories" :projects="projects"
-          :edit-id="editId" />
+        <IncomeForm ref="editFormRef" :accounts="accounts" :categories="categories" :projects="projects" :edit-id="editId" />
       </template>
       <template #footer>
         <button class="btn btn-default" @click="showEdit = false">Cancelar</button>
@@ -95,17 +112,20 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, inject, nextTick, onMounted } from 'vue'
 import { useIncomeStore } from '@/stores/useIncomeStore'
 import { useDashboardStore } from '@/stores/useDashboardStore'
 import { useReportStore } from '@/stores/useReportStore'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
-import DataTable   from '@/components/DataTable.vue'
-import AppModal    from '@/components/AppModal.vue'
-import ImportModal from '@/components/ImportModal.vue'
-import IncomeForm  from '@/components/forms/IncomeForm.vue'
-import * as api    from '@/api'
+import { useAuthStore } from '@/stores/useAuthStore'
+import DataTable      from '@/components/DataTable.vue'
+import ActionDropdown from '@/components/ActionDropdown.vue'
+import AppModal       from '@/components/AppModal.vue'
+import ImportModal    from '@/components/ImportModal.vue'
+import IncomeForm     from '@/components/forms/IncomeForm.vue'
+import { fmtMoney, fmtDate } from '@/utils/format'
+import * as api from '@/api'
 
 const toast          = inject('toast')
 const store          = useIncomeStore()
@@ -113,12 +133,25 @@ const dashboardStore = useDashboardStore()
 const reportStore    = useReportStore()
 const accountStore   = useAccountStore()
 const optionsStore   = useFormOptionsStore()
+const authStore      = useAuthStore()
 
-const showAdd  = ref(false)
-const showEdit = ref(false)
-const saving   = ref(false)
-const formError = ref('')
-const editId    = ref(null)
+const columns = [
+  { key: '_index',        label: '#' },
+  { key: 'concept',       label: 'Concepto' },
+  { key: 'account_name',  label: 'Cuenta' },
+  { key: 'category_name', label: 'Categoría' },
+  { key: 'project_name',  label: 'Proyecto' },
+  { key: 'income_date',   label: 'Fecha' },
+  { key: 'amount',        label: 'Monto' },
+  { key: 'status',        label: 'Estado' },
+  { key: 'actions',       label: 'Acción' },
+]
+
+const showAdd     = ref(false)
+const showEdit    = ref(false)
+const saving      = ref(false)
+const formError   = ref('')
+const editId      = ref(null)
 const importRef   = ref(null)
 const addFormRef  = ref(null)
 const editFormRef = ref(null)
@@ -131,27 +164,29 @@ const today      = new Date()
 const monthLabel = today.toLocaleString('es', { month: 'long', year: 'numeric' })
 
 const stats = computed(() => {
-  const curMonth = today.toISOString().slice(0, 7)
+  const curMonth = today.toLocaleDateString('en-CA').slice(0, 7)
   const curYear  = String(today.getFullYear())
   let month = 0, year = 0, recurring = 0
   for (const r of store.rows) {
-    const dateStr = String(r[5] || '')
-    const amtStr  = String(r[6] || '').replace(/[^0-9.]/g, '')
-    const amt     = parseFloat(amtStr) || 0
-    if (String(r[7] || '').includes('CANCELADO')) continue
-    const parts = dateStr.split('/')
-    if (parts.length === 3) {
-      const ym = `${parts[2]}-${parts[1]}`
-      if (ym === curMonth) month += amt
-      if (parts[2] === curYear) year += amt
-    }
-    if (String(r[1] || '').includes('glyphicon-repeat')) recurring++
+    if (r.status === 'CANCELLED' || r.status === 'CANCELADO') continue
+    if (r.income_date?.startsWith(curMonth)) month += r.amount || 0
+    if (r.income_date?.startsWith(curYear))  year  += r.amount || 0
+    if (r.is_recurring) recurring++
   }
   return { month, year, recurring }
 })
 
-function fmt(n) {
-  return Number(n).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+function statusLabel(s) {
+  if (s === 'CONFIRMED' || s === 'ACTIVO') return 'CONFIRMADO'
+  if (s === 'PENDING' || s === 'PENDIENTE') return 'PENDIENTE'
+  if (s === 'CANCELLED' || s === 'CANCELADO') return 'CANCELADO'
+  return s || '—'
+}
+
+function statusBadgeClass(s) {
+  if (s === 'CONFIRMED' || s === 'ACTIVO') return 'success'
+  if (s === 'PENDING' || s === 'PENDIENTE') return 'warning'
+  return 'default'
 }
 
 function openAdd()   { resetForm(); showAdd.value = true }
@@ -161,7 +196,7 @@ async function onMutated() {
   dashboardStore.invalidate()
   reportStore.invalidate()
   accountStore.invalidate()
-  await store.reload()
+  await Promise.all([store.reload(), authStore.refreshHeaderMetrics()])
 }
 
 async function submitAdd() {
@@ -188,40 +223,27 @@ async function submitEdit() {
   finally { saving.value = false }
 }
 
-async function handleTableAction(e) {
-  const el = e.target.closest('a')
-  if (!el) return
-
-  if (el.classList.contains('edit-income')) {
-    e.preventDefault()
-    const id = parseInt(el.dataset.id)
-    const { data } = await api.getIncomeData(id)
-    if (data.success) {
-      resetForm()
-      editId.value = id
-      showEdit.value = true
-      await nextTick()
-      editFormRef.value?.setData(data.data)
-    } else {
-      toast.danger(data.messages || 'No se pudo cargar el ingreso.')
-    }
+async function editIncome(id) {
+  const { data } = await api.getIncomeData(id)
+  if (data.success) {
+    resetForm()
+    editId.value = id
+    showEdit.value = true
+    await nextTick()
+    editFormRef.value?.setData(data.data)
+  } else {
+    toast.danger(data.messages || 'No se pudo cargar el ingreso.')
   }
+}
 
-  if (el.classList.contains('remove-income')) {
-    e.preventDefault()
-    if (!confirm('¿Eliminar este ingreso? Esta acción no se puede deshacer.')) return
-    const { data } = await api.removeIncome(parseInt(el.dataset.id))
-    if (data.success) { await onMutated(); toast.success(data.messages) }
-    else toast.danger(data.messages)
-  }
+async function removeIncome(id) {
+  if (!confirm('¿Eliminar este ingreso? Esta acción no se puede deshacer.')) return
+  const { data } = await api.removeIncome(id)
+  if (data.success) { await onMutated(); toast.success(data.messages) }
+  else toast.danger(data.messages)
 }
 
 onMounted(async () => {
   await Promise.all([store.load(), optionsStore.load()])
-  document.addEventListener('click', handleTableAction)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleTableAction)
 })
 </script>

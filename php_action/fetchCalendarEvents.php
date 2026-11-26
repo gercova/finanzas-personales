@@ -64,8 +64,7 @@ if ($stmtInc) {
             'account'         => $row['account_name'] ?: 'No especificada',
             'category'        => $row['category_name'] ?: 'Sin categoría',
             'project'         => $row['project_name'] ?: '',
-            'status'          => $row['status'] ?: 'CONFIRMED',
-            'urlView'         => 'income.php'
+            'status'          => $row['status'] ?: 'CONFIRMED'
         ];
     }
     $stmtInc->close();
@@ -109,8 +108,7 @@ if ($stmtExp) {
             'account'         => $row['account_name'] ?: 'No especificada',
             'category'        => $row['category_name'] ?: 'Sin categoría',
             'project'         => $row['project_name'] ?: '',
-            'status'          => $row['status'] ?: 'PAGADO',
-            'urlView'         => 'expense.php'
+            'status'          => $row['status'] ?: 'PAGADO'
         ];
     }
     $stmtExp->close();
@@ -155,8 +153,7 @@ if ($stmtLoans) {
             'borrower'        => $row['borrower_name'],
             'account'         => $row['account_name'] ?: 'No especificada',
             'dueDate'         => $row['due_date'] ?: '',
-            'status'          => $row['status'] ?: 'PENDIENTE',
-            'urlView'         => 'loans.php'
+            'status'          => $row['status'] ?: 'PENDIENTE'
         ];
     }
     $stmtLoans->close();

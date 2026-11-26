@@ -288,11 +288,13 @@
 import { ref, reactive, computed, onMounted, inject } from 'vue'
 import { useSettingStore } from '@/stores/useSettingStore'
 import { useDashboardStore } from '@/stores/useDashboardStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import * as api from '@/api'
 
 const toast          = inject('toast')
 const store          = useSettingStore()
 const dashboardStore = useDashboardStore()
+const authStore      = useAuthStore()
 
 const user  = computed(() => store.user)
 const quota = computed(() => store.quota)
@@ -461,6 +463,9 @@ async function submitUsername() {
       toast.success(data.messages)
       usernameForm.newUsername = ''
       await store.reload()
+      if (store.user?.username) {
+        authStore.setUsername(store.user.username)
+      }
     } else {
       toast.danger(data.messages)
     }

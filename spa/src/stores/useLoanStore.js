@@ -3,56 +3,15 @@ import { ref, reactive, computed, watch } from 'vue'
 import * as api from '@/api'
 import { cacheGet, cacheSet, cacheDel } from './cache'
 
-const CACHE_KEY = 'loans_v2'
+const CACHE_KEY = 'v3_loans'
 
-/**
- * Normalizes a dd/mm/yyyy date string into YYYY-MM-DD for fallback comparison.
- */
-function parseDisplayDate(str) {
-  const m = String(str || '').trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : ''
-}
-
-function stripHtml(html) {
-  return String(html || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-}
-
-function parseAmount(cell) {
-  const num = parseFloat(String(cell || '').replace(/[^0-9.-]/g, ''))
-  return Number.isFinite(num) ? num : 0
-}
-
-/**
- * Fallback metadata builder when rows exist without server-side meta objects.
- */
-function deriveMetaFromRow(r) {
-  const statusText = stripHtml(r[11]).toUpperCase()
-  const interestText = stripHtml(r[7])
-  return {
-    id: null,
-    borrower_id: null,
-    borrower_name: stripHtml(r[1]).split(/\s+(?:DNI|RUC|CE|PAS)/i)[0].trim(),
-    document_type: '',
-    document_number: '',
-    concept: stripHtml(r[2]),
-    notes: '',
-    account_id: null,
-    account_name: stripHtml(r[3]),
-    loan_date: parseDisplayDate(r[4]),
-    due_date: parseDisplayDate(r[5]),
-    principal_amount: parseAmount(r[6]),
-    interest_type: interestText === '-' || !interestText ? 'NONE' : 'PERCENTAGE',
-    interest_value: 0,
-    total_receivable: parseAmount(r[8]),
-    amount_repaid: parseAmount(r[9]),
-    balance_pending: parseAmount(r[10]),
-    status: statusText,
-  }
+function formatDisplayDate(iso) {
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : ''
 }
 
 export const useLoanStore = defineStore('loan', () => {
   const rows     = ref([])
-  const meta     = ref([])
   const loading  = ref(false)
   const error    = ref(null)
   const search   = ref('')
@@ -60,13 +19,13 @@ export const useLoanStore = defineStore('loan', () => {
   const pageSize = ref(15)
 
   const filters = reactive({
-    status: '',          // '', 'PENDIENTE', 'PARCIAL', 'PAGADO', 'UNPAID', 'OVERDUE'
-    borrower: '',        // '', 'id:<id>', 'name:<lowerName>'
-    accountId: '',       // '', '<id>', 'name:<lowerName>'
+    status: '',             // '', 'PENDIENTE', 'PARCIAL', 'PAGADO', 'UNPAID', 'OVERDUE'
+    borrower: '',           // '', 'id:<id>|<name>', 'name:<lowerName>'
+    accountId: '',          // '', '<id>', 'name:<lowerName>'
     dateField: 'loan_date', // 'loan_date' | 'due_date'
-    dateFrom: '',        // 'YYYY-MM-DD'
-    dateTo: '',          // 'YYYY-MM-DD'
-    interestFilter: '',  // '', 'WITH', 'NONE'
+    dateFrom: '',           // 'YYYY-MM-DD'
+    dateTo: '',             // 'YYYY-MM-DD'
+    interestFilter: '',     // '', 'WITH', 'NONE'
     minAmount: '',
     maxAmount: '',
   })
@@ -101,41 +60,37 @@ export const useLoanStore = defineStore('loan', () => {
     page.value = 1
   }
 
-  const filteredEntries = computed(() => {
-    const q = search.value.trim().toLowerCase()
-    const todayISO = new Date().toLocaleDateString('en-CA') // YYYY-MM-DD local
+  const filtered = computed(() => {
+    const q        = search.value.trim().toLowerCase()
+    const todayISO = new Date().toLocaleDateString('en-CA')
 
     const minAmt = filters.minAmount !== '' && filters.minAmount !== null ? parseFloat(filters.minAmount) : null
     const maxAmt = filters.maxAmount !== '' && filters.maxAmount !== null ? parseFloat(filters.maxAmount) : null
 
-    const out = []
-    for (let i = 0; i < rows.value.length; i++) {
-      const r = rows.value[i]
-      const m = meta.value[i] || deriveMetaFromRow(r)
-
+    return rows.value.filter(m => {
       // 1. Status filter
       if (filters.status) {
         if (filters.status === 'UNPAID') {
-          if (m.status !== 'PENDIENTE' && m.status !== 'PARCIAL') continue
+          if (m.status !== 'PENDIENTE' && m.status !== 'PARCIAL') return false
         } else if (filters.status === 'OVERDUE') {
-          if (m.status === 'PAGADO' || !m.due_date || m.due_date >= todayISO) continue
+          if (m.status === 'PAGADO' || !m.due_date || m.due_date >= todayISO) return false
         } else if (m.status !== filters.status) {
-          continue
+          return false
         }
       }
 
-      // 2. Borrower filter ('id:123' or 'name:foo')
+      // 2. Borrower filter
       if (filters.borrower) {
         if (filters.borrower.startsWith('id:')) {
           const [idPart, ...nameParts] = filters.borrower.slice(3).split('|')
-          const targetId = parseInt(idPart, 10)
+          const targetId   = parseInt(idPart, 10)
           const targetName = nameParts.join('|').toLowerCase()
-          const idMatch = m.borrower_id !== null && m.borrower_id === targetId
-          const fallbackNameMatch = !m.borrower_id && targetName && m.borrower_name.toLowerCase() === targetName
-          if (!idMatch && !fallbackNameMatch) continue
+          const idMatch    = m.borrower_id !== null && m.borrower_id === targetId
+          const nameMatch  = !m.borrower_id && targetName && (m.borrower_name || '').toLowerCase() === targetName
+          if (!idMatch && !nameMatch) return false
         } else if (filters.borrower.startsWith('name:')) {
           const targetName = filters.borrower.slice(5).toLowerCase()
-          if (m.borrower_name.toLowerCase() !== targetName) continue
+          if ((m.borrower_name || '').toLowerCase() !== targetName) return false
         }
       }
 
@@ -143,49 +98,60 @@ export const useLoanStore = defineStore('loan', () => {
       if (filters.accountId) {
         if (filters.accountId.startsWith('name:')) {
           const targetAccName = filters.accountId.slice(5).toLowerCase()
-          if (m.account_name.toLowerCase() !== targetAccName) continue
-        } else {
-          if (String(m.account_id || '') !== String(filters.accountId)) continue
+          if ((m.account_name || '').toLowerCase() !== targetAccName) return false
+        } else if (String(m.account_id || '') !== String(filters.accountId)) {
+          return false
         }
       }
 
-      // 4. Date range filter (Loan date or Due date)
+      // 4. Date range filter
       if (filters.dateFrom || filters.dateTo) {
         const targetDate = filters.dateField === 'due_date' ? m.due_date : m.loan_date
-        if (!targetDate) continue
-        if (filters.dateFrom && targetDate < filters.dateFrom) continue
-        if (filters.dateTo && targetDate > filters.dateTo) continue
+        if (!targetDate) return false
+        if (filters.dateFrom && targetDate < filters.dateFrom) return false
+        if (filters.dateTo && targetDate > filters.dateTo) return false
       }
 
       // 5. Interest filter
       if (filters.interestFilter) {
         const hasInterest = m.interest_type !== 'NONE' && m.interest_type !== 'NINGUNO'
-        if (filters.interestFilter === 'WITH' && !hasInterest) continue
-        if (filters.interestFilter === 'NONE' && hasInterest) continue
+        if (filters.interestFilter === 'WITH' && !hasInterest) return false
+        if (filters.interestFilter === 'NONE' && hasInterest) return false
       }
 
       // 6. Capital amount range filter
-      if (minAmt !== null && !Number.isNaN(minAmt) && m.principal_amount < minAmt) continue
-      if (maxAmt !== null && !Number.isNaN(maxAmt) && m.principal_amount > maxAmt) continue
+      if (minAmt !== null && !Number.isNaN(minAmt) && m.principal_amount < minAmt) return false
+      if (maxAmt !== null && !Number.isNaN(maxAmt) && m.principal_amount > maxAmt) return false
 
-      // 7. Free-text search (visible row text + notes/doc)
+      // 7. Free-text search across structured fields
       if (q) {
-        const rowMatch = r.some((cell, ci) => ci < 12 && stripHtml(cell).toLowerCase().includes(q))
-        const metaMatch = (m.notes && m.notes.toLowerCase().includes(q)) ||
-                          (m.document_number && m.document_number.toLowerCase().includes(q))
-        if (!rowMatch && !metaMatch) continue
+        const haystack = [
+          m.borrower_name,
+          m.document_type,
+          m.document_number,
+          m.concept,
+          m.notes,
+          m.account_name,
+          m.loan_date,
+          formatDisplayDate(m.loan_date),
+          m.due_date,
+          formatDisplayDate(m.due_date),
+          m.principal_amount,
+          m.total_receivable,
+          m.amount_repaid,
+          m.balance_pending,
+          m.status,
+        ]
+        if (!haystack.some(v => String(v ?? '').toLowerCase().includes(q))) return false
       }
 
-      out.push({ row: r, meta: m })
-    }
-    return out
+      return true
+    })
   })
 
-  const filtered     = computed(() => filteredEntries.value.map(e => e.row))
-  const filteredMeta = computed(() => filteredEntries.value.map(e => e.meta))
-
   const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)))
-  const pageRows   = computed(() => {
+
+  const pageRows = computed(() => {
     const safePage = Math.min(page.value, totalPages.value)
     const s = (safePage - 1) * pageSize.value
     return filtered.value.slice(s, s + pageSize.value)
@@ -194,33 +160,40 @@ export const useLoanStore = defineStore('loan', () => {
   async function load(force = false) {
     if (!force) {
       const c = cacheGet(CACHE_KEY)
-      if (c && Array.isArray(c.rows)) {
-        rows.value = c.rows
-        meta.value = Array.isArray(c.meta) ? c.meta : []
+      if (Array.isArray(c)) {
+        rows.value = c
         return
       }
     }
-    loading.value = true; error.value = null
+    loading.value = true
+    error.value   = null
     try {
       const { data } = await api.fetchLoans()
-      rows.value = data.data ?? []
-      meta.value = data.meta ?? []
-      cacheSet(CACHE_KEY, { rows: rows.value, meta: meta.value })
+      rows.value = Array.isArray(data?.data) ? data.data : []
+      cacheSet(CACHE_KEY, rows.value)
       page.value = 1
-    } catch (e) { error.value = e.message }
-    finally { loading.value = false }
+    } catch (e) {
+      error.value = e.response?.data?.messages || e.message || 'Error cargando préstamos.'
+    } finally {
+      loading.value = false
+    }
   }
 
   function invalidate() {
     cacheDel(CACHE_KEY)
+    cacheDel('loans_v2')
     cacheDel('loans')
   }
-  async function reload() { invalidate(); await load(true) }
+
+  async function reload() {
+    invalidate()
+    await load(true)
+  }
 
   return {
-    rows, meta, loading, error, search, page, pageSize,
+    rows, loading, error, search, page, pageSize,
     filters, activeFilterCount, resetFilters,
-    filtered, filteredMeta, totalPages, pageRows,
+    filtered, totalPages, pageRows,
     load, reload, invalidate
   }
 })

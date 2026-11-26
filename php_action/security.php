@@ -51,18 +51,15 @@ function initSecureSession() {
 
     // Verify session validity if user is logged in
     $sessionLifetime = (int)env('SESSION_LIFETIME', 1800);
-    $isActionDir = (strpos($_SERVER['SCRIPT_NAME'] ?? '', '/php_action/') !== false);
-    $loginUrl    = $isActionDir ? '../index.php' : 'index.php';
 
     if (isset($_SESSION['userId'])) {
         // Inactivity timeout check
         if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $sessionLifetime)) {
             session_unset();
             session_destroy();
-            if (!headers_sent()) {
-                header('location: ' . $loginUrl . '?error=timeout');
-                exit();
-            }
+            session_start();
+            $GLOBALS['__sessionInvalidReason'] = 'timeout';
+            return;
         }
         $_SESSION['last_activity'] = time();
 
@@ -71,12 +68,51 @@ function initSecureSession() {
         if (isset($_SESSION['user_agent']) && $_SESSION['user_agent'] !== hash('sha256', $currentAgent)) {
             session_unset();
             session_destroy();
-            if (!headers_sent()) {
-                header('location: ' . $loginUrl . '?error=hijack');
-                exit();
-            }
+            session_start();
+            $GLOBALS['__sessionInvalidReason'] = 'hijack';
+            return;
         }
     }
+}
+
+/**
+ * Helper to parse JSON or form-encoded request input uniformly
+ */
+function getRequestData(): array {
+    if (!empty($_POST)) {
+        return $_POST;
+    }
+    $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+    if (stripos($contentType, 'application/json') !== false) {
+        $raw = file_get_contents('php://input');
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+    }
+    return [];
+}
+
+/**
+ * Fetch current user's header KPI metrics (month income & today's expenses)
+ */
+function fetchHeaderMetrics(mysqli $connect, int $userId): array {
+    $currentMonth = date('Y-m');
+    list($monthStart, $monthEnd) = getMonthDateBounds($currentMonth);
+    $todayDate = date('Y-m-d');
+
+    $monthIncome   = 0.0;
+    $todayExpenses = 0.0;
+    $hmSets = callProcedureMulti($connect, "CALL sp_get_header_metrics(?, ?, ?, ?)", "isss", [$userId, $monthStart, $monthEnd, $todayDate]);
+    if (!empty($hmSets[0][0])) {
+        $monthIncome   = (float)$hmSets[0][0]['month_income'];
+        $todayExpenses = (float)$hmSets[0][0]['today_expenses'];
+    }
+
+    return [
+        'month_income'   => $monthIncome,
+        'today_expenses' => $todayExpenses,
+    ];
 }
 
 /**

@@ -25,13 +25,12 @@
 
     <!-- ── TAB 1: GESTIÓN DE PRÉSTAMOS ───────────────────────────────── -->
     <div v-show="currentTab === 'loans'">
-      <!-- Stat cards matching loans.php -->
       <div class="row" style="margin-bottom:20px;">
         <div class="col-xs-12 col-sm-4">
           <div class="panel panel-danger">
             <div class="panel-heading"><i class="glyphicon glyphicon-share-alt"></i> Total Prestado</div>
             <div class="panel-body text-center">
-              <h3 style="margin:0;font-weight:700;" class="text-danger">S/ {{ fmt(loanStats.prestado) }}</h3>
+              <h3 style="margin:0;font-weight:700;" class="text-danger">S/ {{ fmtMoney(loanStats.prestado) }}</h3>
               <small class="text-muted">
                 {{ (store.activeFilterCount > 0 || store.search) ? 'total filtrado' : 'préstamos activos' }}
               </small>
@@ -42,7 +41,7 @@
           <div class="panel panel-success">
             <div class="panel-heading"><i class="glyphicon glyphicon-ok-sign"></i> Total Cobrado</div>
             <div class="panel-body text-center">
-              <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmt(loanStats.cobrado) }}</h3>
+              <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmtMoney(loanStats.cobrado) }}</h3>
               <small class="text-muted">
                 {{ (store.activeFilterCount > 0 || store.search) ? 'recuperado (filtrado)' : 'recuperado' }}
               </small>
@@ -53,7 +52,7 @@
           <div class="panel panel-warning">
             <div class="panel-heading"><i class="glyphicon glyphicon-time"></i> Total Pendiente</div>
             <div class="panel-body text-center">
-              <h3 style="margin:0;font-weight:700;" class="text-warning">S/ {{ fmt(loanStats.pendiente) }}</h3>
+              <h3 style="margin:0;font-weight:700;" class="text-warning">S/ {{ fmtMoney(loanStats.pendiente) }}</h3>
               <small class="text-muted">
                 {{ (store.activeFilterCount > 0 || store.search) ? 'por cobrar (filtrado)' : 'por cobrar' }}
               </small>
@@ -62,6 +61,7 @@
         </div>
       </div>
 
+      <!-- Clickable quick status filters -->
       <div style="margin-bottom:12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
         <button type="button" class="btn btn-xs"
                 :style="{ background:'#e74c3c', color:'#fff', border: store.filters.status==='PENDIENTE' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
@@ -97,8 +97,9 @@
         <DataTable
           title="Gestión de Préstamos"
           icon="glyphicon-share-alt text-danger"
-          :headers="['#','Prestatario','Concepto','Cuenta','Fecha Préstamo','Vencimiento','Capital','Interés','Total a Cobrar','Cobrado','Pendiente','Estado','Acción']"
+          :columns="loanColumns"
           :store="store"
+          :row-style-fn="loanRowStyle"
         >
           <template #actions>
             <button class="btn btn-default btn-sm" @click="importRef.open()">
@@ -225,17 +226,77 @@
               </div>
             </div>
           </template>
+
+          <template #cell-borrower_name="{ row }">
+            <span>{{ row.borrower_name }}</span>
+            <template v-if="row.document_number">
+              <br />
+              <small class="text-muted">
+                <span class="label label-info" style="font-size:9px;padding:1px 4px;">{{ row.document_type }}</span>
+                {{ row.document_number }}
+              </small>
+            </template>
+          </template>
+          <template #cell-account_name="{ row }">{{ row.account_name || '-' }}</template>
+          <template #cell-loan_date="{ row }">{{ fmtDate(row.loan_date) }}</template>
+          <template #cell-due_date="{ row }">{{ row.due_date ? fmtDate(row.due_date) : '-' }}</template>
+          <template #cell-principal_amount="{ row }">S/ {{ fmtMoney(row.principal_amount) }}</template>
+          <template #cell-interest="{ row }">{{ formatInterest(row) }}</template>
+          <template #cell-total_receivable="{ row }">S/ {{ fmtMoney(row.total_receivable) }}</template>
+          <template #cell-amount_repaid="{ row }">S/ {{ fmtMoney(row.amount_repaid) }}</template>
+          <template #cell-balance_pending="{ row }">S/ {{ fmtMoney(row.balance_pending) }}</template>
+          <template #cell-status="{ row }">
+            <span class="label" :style="{ background: statusColor(row.status) }">{{ row.status }}</span>
+          </template>
+          <template #cell-actions="{ row }">
+            <ActionDropdown>
+              <li>
+                <a href="#" @click.prevent="openPayLoan(row.id)">
+                  <i class="glyphicon glyphicon-usd text-success"></i> Registrar Pago
+                </a>
+              </li>
+              <li class="divider"></li>
+              <li class="dropdown-header">Cambiar Estado</li>
+              <li v-if="row.status !== 'PAGADO'">
+                <a href="#" @click.prevent="changeLoanStatus(row.id, 'PAGADO')">
+                  <i class="glyphicon glyphicon-ok-sign text-success"></i> Marcar como PAGADO
+                </a>
+              </li>
+              <li v-if="row.status !== 'PENDIENTE'">
+                <a href="#" @click.prevent="changeLoanStatus(row.id, 'PENDIENTE')">
+                  <i class="glyphicon glyphicon-time text-danger"></i> Marcar como PENDIENTE
+                </a>
+              </li>
+              <li v-if="row.status !== 'PARCIAL' && row.balance_pending > 0 && row.amount_repaid > 0">
+                <a href="#" @click.prevent="changeLoanStatus(row.id, 'PARCIAL')">
+                  <i class="glyphicon glyphicon-adjust text-warning"></i> Marcar como PARCIAL
+                </a>
+              </li>
+              <li class="divider"></li>
+              <li>
+                <a href="#" @click.prevent="editLoan(row.id)">
+                  <i class="glyphicon glyphicon-edit"></i> Editar
+                </a>
+              </li>
+              <li class="divider"></li>
+              <li>
+                <a href="#" @click.prevent="removeLoan(row.id)">
+                  <i class="glyphicon glyphicon-trash text-danger"></i> Eliminar
+                </a>
+              </li>
+            </ActionDropdown>
+          </template>
         </DataTable>
       </div>
     </div>
 
-    <!-- ── TAB 2: LISTADO DE PRESTATARIOS (Matching Reference Image) ──── -->
+    <!-- ── TAB 2: LISTADO DE PRESTATARIOS ────────────────────────────── -->
     <div v-show="currentTab === 'borrowers'">
       <div class="panel panel-default">
         <DataTable
           title="Listado de prestatarios"
           icon="glyphicon-edit"
-          :headers="['#','Documento','Nombre / Razón Social','Teléfono','Dirección','Estado','Opciones']"
+          :columns="borrowerColumns"
           :store="borrowerStore"
         >
           <template #actions>
@@ -243,13 +304,28 @@
               <i class="glyphicon glyphicon-plus-sign"></i> Agregar prestatario
             </button>
           </template>
+
+          <template #cell-document="{ row }">
+            <span class="label label-info" style="font-size:10px;padding:2px 5px;margin-right:4px;">{{ row.document_type }}</span>
+            {{ row.document_number }}
+          </template>
+          <template #cell-phone="{ row }">{{ row.phone || '-' }}</template>
+          <template #cell-address="{ row }">{{ row.address || '-' }}</template>
+          <template #cell-status="{ row }">
+            <span :class="row.status === 1 ? 'label label-success' : 'label label-danger'">
+              {{ row.status === 1 ? 'Disponible' : 'No disponible' }}
+            </span>
+          </template>
+          <template #cell-actions="{ row }">
+            <ActionDropdown :show-icon="false">
+              <li><a href="#" @click.prevent="editBorrower(row.id)"><i class="glyphicon glyphicon-edit"></i> Editar</a></li>
+              <li class="divider"></li>
+              <li><a href="#" @click.prevent="removeBorrower(row.id)"><i class="glyphicon glyphicon-trash text-danger"></i> Eliminar</a></li>
+            </ActionDropdown>
+          </template>
         </DataTable>
       </div>
     </div>
-
-    <!-- ============================================================== -->
-    <!-- MODALS: LOANS                                                  -->
-    <!-- ============================================================== -->
 
     <!-- Add Loan Modal -->
     <AppModal v-model="showAdd" title="Registrar Préstamo" icon="glyphicon-plus-sign"
@@ -314,10 +390,6 @@
       </template>
     </AppModal>
 
-    <!-- ============================================================== -->
-    <!-- MODALS: BORROWERS (PRESTATARIOS)                               -->
-    <!-- ============================================================== -->
-
     <!-- Add Borrower Modal -->
     <AppModal v-model="showAddBorrower" title="Agregar prestatario" icon="glyphicon-plus-sign"
               header-color="#34495e" size="md" @closed="resetBorrowerForm">
@@ -355,7 +427,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, inject, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoanStore } from '@/stores/useLoanStore'
 import { useBorrowerStore } from '@/stores/useBorrowerStore'
@@ -363,13 +435,15 @@ import { useDashboardStore } from '@/stores/useDashboardStore'
 import { useReportStore } from '@/stores/useReportStore'
 import { useAccountStore } from '@/stores/useAccountStore'
 import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
-import DataTable    from '@/components/DataTable.vue'
-import AppModal     from '@/components/AppModal.vue'
-import ImportModal  from '@/components/ImportModal.vue'
-import LoanForm     from '@/components/forms/LoanForm.vue'
-import PaymentForm  from '@/components/forms/PaymentForm.vue'
-import BorrowerForm from '@/components/forms/BorrowerForm.vue'
-import * as api     from '@/api'
+import DataTable      from '@/components/DataTable.vue'
+import ActionDropdown from '@/components/ActionDropdown.vue'
+import AppModal       from '@/components/AppModal.vue'
+import ImportModal    from '@/components/ImportModal.vue'
+import LoanForm       from '@/components/forms/LoanForm.vue'
+import PaymentForm    from '@/components/forms/PaymentForm.vue'
+import BorrowerForm   from '@/components/forms/BorrowerForm.vue'
+import { fmtMoney, fmtDate } from '@/utils/format'
+import * as api from '@/api'
 
 const route          = useRoute()
 const router         = useRouter()
@@ -380,6 +454,54 @@ const dashboardStore = useDashboardStore()
 const reportStore    = useReportStore()
 const accountStore   = useAccountStore()
 const optionsStore   = useFormOptionsStore()
+
+const loanColumns = [
+  { key: '_index',           label: '#' },
+  { key: 'borrower_name',    label: 'Prestatario' },
+  { key: 'concept',          label: 'Concepto' },
+  { key: 'account_name',     label: 'Cuenta' },
+  { key: 'loan_date',        label: 'Fecha Préstamo' },
+  { key: 'due_date',         label: 'Vencimiento' },
+  { key: 'principal_amount', label: 'Capital' },
+  { key: 'interest',         label: 'Interés' },
+  { key: 'total_receivable', label: 'Total a Cobrar' },
+  { key: 'amount_repaid',    label: 'Cobrado' },
+  { key: 'balance_pending',  label: 'Pendiente' },
+  { key: 'status',           label: 'Estado' },
+  { key: 'actions',          label: 'Acción' },
+]
+
+const borrowerColumns = [
+  { key: '_index',    label: '#' },
+  { key: 'document',  label: 'Documento' },
+  { key: 'full_name', label: 'Nombre / Razón Social' },
+  { key: 'phone',     label: 'Teléfono' },
+  { key: 'address',   label: 'Dirección' },
+  { key: 'status',    label: 'Estado' },
+  { key: 'actions',   label: 'Opciones' },
+]
+
+function loanRowStyle(row) {
+  if (row.status === 'PENDIENTE') return { backgroundColor: '#ffcccc' }
+  if (row.status === 'PARCIAL')   return { backgroundColor: '#fff3cd' }
+  if (row.status === 'PAGADO')    return { backgroundColor: '#e8d5f5' }
+  return undefined
+}
+
+function statusColor(status) {
+  if (status === 'PENDIENTE') return '#e74c3c'
+  if (status === 'PARCIAL')   return '#f39c12'
+  if (status === 'PAGADO')    return '#8e44ad'
+  return '#777'
+}
+
+function formatInterest(row) {
+  if (!row.interest_type || row.interest_type === 'NONE' || row.interest_type === 'NINGUNO') return '-'
+  if (row.interest_type === 'PERCENTAGE' || row.interest_type === 'PORCENTAJE') {
+    return `${(Number(row.interest_value) || 0).toFixed(1)}%`
+  }
+  return `S/ ${fmtMoney(row.interest_value)}`
+}
 
 // Tab navigation state
 const currentTab = ref(
@@ -437,28 +559,19 @@ const borrowerFilterOptions = computed(() => {
     seenIds.add(id)
     seenNames.add(name.toLowerCase())
     const doc = b.document_number ? ` (${b.document_type || 'DOC'} ${b.document_number})` : ''
-    list.push({
-      value: `id:${id}|${name}`,
-      label: `${name}${doc}`,
-    })
+    list.push({ value: `id:${id}|${name}`, label: `${name}${doc}` })
   }
 
-  for (const m of store.meta) {
+  for (const m of store.rows) {
     const name = String(m.borrower_name || '').trim()
     if (!name) continue
     if (m.borrower_id && !seenIds.has(m.borrower_id)) {
       seenIds.add(m.borrower_id)
       seenNames.add(name.toLowerCase())
-      list.push({
-        value: `id:${m.borrower_id}|${name}`,
-        label: name,
-      })
+      list.push({ value: `id:${m.borrower_id}|${name}`, label: name })
     } else if (!m.borrower_id && !seenNames.has(name.toLowerCase())) {
       seenNames.add(name.toLowerCase())
-      list.push({
-        value: `name:${name.toLowerCase()}`,
-        label: name,
-      })
+      list.push({ value: `name:${name.toLowerCase()}`, label: name })
     }
   }
 
@@ -479,7 +592,7 @@ const accountFilterOptions = computed(() => {
     list.push({ value: id, label: name })
   }
 
-  for (const m of store.meta) {
+  for (const m of store.rows) {
     const name = String(m.account_name || '').trim()
     if (!name || name === '-') continue
     if (m.account_id && !seenIds.has(String(m.account_id))) {
@@ -526,7 +639,7 @@ function applyDatePreset(preset) {
 
 const loanStats = computed(() => {
   let prestado = 0, cobrado = 0, pendiente = 0
-  for (const m of store.filteredMeta) {
+  for (const m of store.filtered) {
     prestado  += m.total_receivable || 0
     cobrado   += m.amount_repaid || 0
     pendiente += m.balance_pending || 0
@@ -534,20 +647,13 @@ const loanStats = computed(() => {
   return { prestado, cobrado, pendiente }
 })
 
-function fmt(n) {
-  const num = parseFloat(n) || 0
-  return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-}
-
 function openAdd()   { resetForm(); showAdd.value = true }
 function resetForm() { formError.value = '' }
 
 function openAddBorrower() {
   borrowerFormError.value = ''
   showAddBorrower.value = true
-  nextTick(() => {
-    addBorrowerRef.value?.reset()
-  })
+  nextTick(() => addBorrowerRef.value?.reset())
 }
 
 function openAddBorrowerFromLoan() {
@@ -567,31 +673,20 @@ async function onMutated() {
 }
 
 async function onBorrowerMutated() {
-  await Promise.all([
-    borrowerStore.reload(),
-    optionsStore.reload()
-  ])
+  await Promise.all([borrowerStore.reload(), optionsStore.reload()])
 }
 
-// ── Submit Loan Handlers ──────────────────────────────────────────────
+// Submit Loan Handlers
 async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el capital sea mayor a 0.'; return }
     const { data } = await api.createLoan(fd)
-    if (data.success) {
-      showAdd.value = false
-      await onMutated()
-      toast.success(data.messages)
-    } else {
-      formError.value = data.messages
-    }
-  } catch {
-    formError.value = 'Error de comunicación.'
-  } finally {
-    saving.value = false
-  }
+    if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
+    else formError.value = data.messages
+  } catch { formError.value = 'Error de comunicación.' }
+  finally { saving.value = false }
 }
 
 async function submitEdit() {
@@ -600,18 +695,10 @@ async function submitEdit() {
     const fd = editFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Complete los campos requeridos y verifique que el capital sea mayor a 0.'; return }
     const { data } = await api.editLoan(fd)
-    if (data.success) {
-      showEdit.value = false
-      await onMutated()
-      toast.success(data.messages)
-    } else {
-      formError.value = data.messages
-    }
-  } catch {
-    formError.value = 'Error de comunicación.'
-  } finally {
-    saving.value = false
-  }
+    if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
+    else formError.value = data.messages
+  } catch { formError.value = 'Error de comunicación.' }
+  finally { saving.value = false }
 }
 
 async function submitPayment() {
@@ -620,47 +707,29 @@ async function submitPayment() {
     const fd = payFormRef.value?.getFormData()
     if (!fd) { formError.value = 'Seleccione la cuenta destino e ingrese un monto mayor a 0.'; return }
     const { data } = await api.addLoanPayment(fd)
-    if (data.success) {
-      showPay.value = false
-      await onMutated()
-      toast.success(data.messages)
-    } else {
-      formError.value = data.messages
-    }
-  } catch {
-    formError.value = 'Error de comunicación.'
-  } finally {
-    saving.value = false
-  }
+    if (data.success) { showPay.value = false; await onMutated(); toast.success(data.messages) }
+    else formError.value = data.messages
+  } catch { formError.value = 'Error de comunicación.' }
+  finally { saving.value = false }
 }
 
-// ── Submit Borrower Handlers ──────────────────────────────────────────
+// Submit Borrower Handlers
 async function submitAddBorrower() {
   savingBorrower.value = true
   borrowerFormError.value = ''
   try {
     const fd = addBorrowerRef.value?.getFormData()
-    if (!fd) {
-      borrowerFormError.value = 'Ingrese el documento y el nombre completo del prestatario.'
-      return
-    }
+    if (!fd) { borrowerFormError.value = 'Ingrese el documento y el nombre completo del prestatario.'; return }
     const { data } = await api.createBorrower(fd)
     if (data.success) {
       showAddBorrower.value = false
       await onBorrowerMutated()
       toast.success(data.messages)
 
-      // If opened from loan form, select this new borrower in LoanForm
       if (openedFromLoan.value) {
-        const newBorrower = {
-          id: data.borrower_id,
-          full_name: data.full_name
-        }
-        if (showAdd.value) {
-          addFormRef.value?.selectBorrower(newBorrower)
-        } else if (showEdit.value) {
-          editFormRef.value?.selectBorrower(newBorrower)
-        }
+        const newBorrower = { id: data.borrower_id, full_name: data.full_name }
+        if (showAdd.value)       addFormRef.value?.selectBorrower(newBorrower)
+        else if (showEdit.value) editFormRef.value?.selectBorrower(newBorrower)
         openedFromLoan.value = false
       }
     } else {
@@ -678,10 +747,7 @@ async function submitEditBorrower() {
   borrowerFormError.value = ''
   try {
     const fd = editBorrowerRef.value?.getFormData()
-    if (!fd) {
-      borrowerFormError.value = 'Ingrese el documento y el nombre completo del prestatario.'
-      return
-    }
+    if (!fd) { borrowerFormError.value = 'Ingrese el documento y el nombre completo del prestatario.'; return }
     const { data } = await api.editBorrower(fd)
     if (data.success) {
       showEditBorrower.value = false
@@ -697,94 +763,68 @@ async function submitEditBorrower() {
   }
 }
 
-// ── Table Actions Delegation ──────────────────────────────────────────
-async function handleTableAction(e) {
-  const el = e.target.closest('a')
-  if (!el) return
+// Pure Vue Action Handlers
+async function editLoan(id) {
+  const { data } = await api.getLoanData(id)
+  if (data.success) {
+    resetForm()
+    editId.value = id
+    showEdit.value = true
+    await nextTick()
+    editFormRef.value?.setData(data.data)
+  } else {
+    toast.danger(data.messages || 'No se pudo cargar el préstamo.')
+  }
+}
 
-  // Loans: Edit
-  if (el.classList.contains('edit-loan')) {
-    e.preventDefault()
-    const id = parseInt(el.dataset.id)
-    const { data } = await api.getLoanData(id)
-    if (data.success) {
-      resetForm()
-      editId.value = id
-      showEdit.value = true
-      await nextTick()
-      editFormRef.value?.setData(data.data)
-    } else {
-      toast.danger(data.messages || 'No se pudo cargar el préstamo.')
+async function removeLoan(id) {
+  if (!confirm('¿Eliminar este préstamo? Esta acción no se puede deshacer.')) return
+  const { data } = await api.removeLoan(id)
+  if (data.success) { await onMutated(); toast.success(data.messages) }
+  else toast.danger(data.messages)
+}
+
+async function changeLoanStatus(id, status) {
+  const { data } = await api.updateLoanStatus(id, status)
+  if (data.success) { await onMutated(); toast.success(data.messages) }
+  else toast.danger(data.messages)
+}
+
+async function openPayLoan(id) {
+  const { data } = await api.getLoanData(id)
+  if (data.success) {
+    resetForm()
+    editId.value = id
+    payInfo.value = {
+      borrower: data.data.borrower_name,
+      pending:  data.data.balance_pending,
     }
+    showPay.value = true
+    await nextTick()
+    payFormRef.value?.setLoanId(id)
+  } else {
+    toast.danger(data.messages || 'No se pudo cargar el préstamo.')
   }
+}
 
-  // Loans: Remove
-  if (el.classList.contains('remove-loan')) {
-    e.preventDefault()
-    if (!confirm('¿Eliminar este préstamo? Esta acción no se puede deshacer.')) return
-    const { data } = await api.removeLoan(parseInt(el.dataset.id))
-    if (data.success) { await onMutated(); toast.success(data.messages) }
-    else toast.danger(data.messages)
+async function editBorrower(id) {
+  const { data } = await api.getBorrowerData(id)
+  if (data.success) {
+    resetBorrowerForm()
+    editBorrowerId.value = id
+    showEditBorrower.value = true
+    await nextTick()
+    editBorrowerRef.value?.setData(data.data)
+  } else {
+    toast.danger(data.messages || 'No se pudo cargar el prestatario.')
   }
+}
 
-  // Loans: Change Status
-  if (el.classList.contains('change-status-loan')) {
-    e.preventDefault()
-    const id = parseInt(el.dataset.id)
-    const status = el.dataset.status
-    const { data } = await api.updateLoanStatus(id, status)
-    if (data.success) { await onMutated(); toast.success(data.messages) }
-    else toast.danger(data.messages)
-  }
-
-  // Loans: Pay
-  if (el.classList.contains('pay-loan')) {
-    e.preventDefault()
-    const id = parseInt(el.dataset.id)
-    const { data } = await api.getLoanData(id)
-    if (data.success) {
-      resetForm()
-      editId.value = id
-      payInfo.value = {
-        borrower: data.data.borrower_name,
-        pending:  data.data.balance_pending,
-      }
-      showPay.value = true
-      await nextTick()
-      payFormRef.value?.setLoanId(id)
-    } else {
-      toast.danger(data.messages || 'No se pudo cargar el préstamo.')
-    }
-  }
-
-  // Borrowers: Edit
-  if (el.classList.contains('edit-borrower')) {
-    e.preventDefault()
-    const id = parseInt(el.dataset.id)
-    const { data } = await api.getBorrowerData(id)
-    if (data.success) {
-      resetBorrowerForm()
-      editBorrowerId.value = id
-      showEditBorrower.value = true
-      await nextTick()
-      editBorrowerRef.value?.setData(data.data)
-    } else {
-      toast.danger(data.messages || 'No se pudo cargar el prestatario.')
-    }
-  }
-
-  // Borrowers: Remove
-  if (el.classList.contains('remove-borrower')) {
-    e.preventDefault()
-    if (!confirm('¿Eliminar este prestatario? Esta acción no se puede deshacer.')) return
-    const { data } = await api.removeBorrower(parseInt(el.dataset.id))
-    if (data.success) {
-      await onBorrowerMutated()
-      toast.success(data.messages)
-    } else {
-      toast.danger(data.messages)
-    }
-  }
+async function removeBorrower(id) {
+  if (!confirm('¿Eliminar este prestatario? Esta acción no se puede deshacer.')) return
+  const { data } = await api.removeBorrower(id)
+  if (data.success) { await onBorrowerMutated(); toast.success(data.messages) }
+  else toast.danger(data.messages)
 }
 
 onMounted(async () => {
@@ -793,10 +833,5 @@ onMounted(async () => {
     borrowerStore.load(),
     optionsStore.load()
   ])
-  document.addEventListener('click', handleTableAction)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleTableAction)
 })
 </script>

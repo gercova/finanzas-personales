@@ -3,14 +3,14 @@ import { ref } from 'vue'
 import * as api from '@/api'
 
 /**
- * Reactive store for modal form dropdown options (accounts, financial categories, projects).
- * Initialized from PHP-injected window globals for zero-latency boot, and refreshed on mutations.
+ * Pure reactive store for modal form & filter dropdown options.
+ * Loaded cleanly via REST JSON API with zero PHP window globals.
  */
 export const useFormOptionsStore = defineStore('formOptions', () => {
-  const accounts          = ref(typeof window !== 'undefined' ? (window.incomeAccounts || []) : [])
-  const incomeCategories  = ref(typeof window !== 'undefined' ? (window.incomeCategories || []) : [])
-  const expenseCategories = ref(typeof window !== 'undefined' ? (window.expenseCategories || []) : [])
-  const projects          = ref(typeof window !== 'undefined' ? (window.incomeProjects || []) : [])
+  const accounts          = ref([])
+  const incomeCategories  = ref([])
+  const expenseCategories = ref([])
+  const projects          = ref([])
   const borrowers         = ref([])
   const loaded            = ref(false)
 
@@ -25,16 +25,6 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
         projects.value          = data.projects || []
         borrowers.value         = data.borrowers || []
         loaded.value            = true
-
-        if (typeof window !== 'undefined') {
-          window.incomeAccounts    = accounts.value
-          window.expenseAccounts   = accounts.value
-          window.loanAccounts      = accounts.value
-          window.incomeCategories  = incomeCategories.value
-          window.expenseCategories = expenseCategories.value
-          window.incomeProjects    = projects.value
-          window.expenseProjects   = projects.value
-        }
       }
     } catch (e) {
       console.error('Error cargando opciones de formulario:', e)
@@ -45,13 +35,24 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
     await load(true)
   }
 
+  function reset() {
+    accounts.value          = []
+    incomeCategories.value  = []
+    expenseCategories.value = []
+    projects.value          = []
+    borrowers.value         = []
+    loaded.value            = false
+  }
+
   return {
     accounts,
     incomeCategories,
     expenseCategories,
     projects,
     borrowers,
+    loaded,
     load,
-    reload
+    reload,
+    reset
   }
 })
