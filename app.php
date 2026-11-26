@@ -129,12 +129,6 @@ $appBaseUrl = rtrim(dirname($_SERVER['SCRIPT_NAME']), "/\\") . "/";
                         <li id="navAccounts"><a href="#" onclick="return spaNav('/accounts')"><i class="glyphicon glyphicon-credit-card"></i> Cuentas y Categorías</a></li>
                         <li id="navSetting"><a href="#" onclick="return spaNav('/settings')"><i class="glyphicon glyphicon-wrench"></i> Configuración</a></li>
                         <li role="separator" class="divider"></li>
-                        <li class="dropdown-header">Inventario / POS</li>
-                        <li id="navBrands"><a href="#" onclick="return spaNav('/brands')"><i class="glyphicon glyphicon-tag"></i> Fabricantes</a></li>
-                        <li id="navCategories"><a href="#" onclick="return spaNav('/categories')"><i class="glyphicon glyphicon-th-list"></i> Categorías POS</a></li>
-                        <li id="navProducts"><a href="#" onclick="return spaNav('/products')"><i class="glyphicon glyphicon-barcode"></i> Productos</a></li>
-                        <li id="navOrders"><a href="#" onclick="return spaNav('/orders')"><i class="glyphicon glyphicon-shopping-cart"></i> Órdenes</a></li>
-                        <li role="separator" class="divider"></li>
                         <li><a href="logout.php"><i class="glyphicon glyphicon-log-out"></i> Salir</a></li>
                     </ul>
                 </li>

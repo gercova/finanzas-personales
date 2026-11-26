@@ -1,14 +1,14 @@
 <?php
 /**
  * php_action/getFormOptions.php
- * Returns current user's active dropdown options for modal forms (accounts, financial categories, projects, POS brands & categories).
+ * Returns current user's active dropdown options for modal forms (accounts, financial categories, projects).
  */
 require_once 'core.php';
 header('Content-Type: application/json; charset=utf-8');
 
 $userId = (int)$_SESSION['userId'];
 
-$accounts = $incomeCategories = $expenseCategories = $projects = $brands = $posCategories = [];
+$accounts = $incomeCategories = $expenseCategories = $projects = [];
 
 $stmt = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
 if ($stmt) {
@@ -46,30 +46,10 @@ if ($stmt) {
     $stmt->close();
 }
 
-$stmt = $connect->prepare("SELECT brand_id AS id, brand_name FROM brands WHERE brand_status=1 AND brand_active=1 AND is_deleted=0 AND (created_by=? OR created_by IS NULL) ORDER BY brand_name");
-if ($stmt) {
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) $brands[] = $row;
-    $stmt->close();
-}
-
-$stmt = $connect->prepare("SELECT categories_id AS id, categories_name FROM categories WHERE categories_status=1 AND categories_active=1 AND is_deleted=0 AND (created_by=? OR created_by IS NULL) ORDER BY categories_name");
-if ($stmt) {
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    while ($row = $res->fetch_assoc()) $posCategories[] = $row;
-    $stmt->close();
-}
-
 echo json_encode([
     'success'           => true,
     'accounts'          => $accounts,
     'incomeCategories'  => $incomeCategories,
     'expenseCategories' => $expenseCategories,
     'projects'          => $projects,
-    'brands'            => $brands,
-    'posCategories'     => $posCategories,
 ], JSON_UNESCAPED_UNICODE);

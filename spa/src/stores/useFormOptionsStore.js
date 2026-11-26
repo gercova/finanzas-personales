@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import * as api from '@/api'
 
 /**
- * Reactive store for modal form dropdown options (accounts, categories, projects, POS brands & categories).
+ * Reactive store for modal form dropdown options (accounts, financial categories, projects).
  * Initialized from PHP-injected window globals for zero-latency boot, and refreshed on mutations.
  */
 export const useFormOptionsStore = defineStore('formOptions', () => {
@@ -11,12 +11,10 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
   const incomeCategories  = ref(typeof window !== 'undefined' ? (window.incomeCategories || []) : [])
   const expenseCategories = ref(typeof window !== 'undefined' ? (window.expenseCategories || []) : [])
   const projects          = ref(typeof window !== 'undefined' ? (window.incomeProjects || []) : [])
-  const brands            = ref([])
-  const posCategories     = ref([])
-  const loadedPos         = ref(false)
+  const loaded            = ref(false)
 
   async function load(force = false) {
-    if (!force && loadedPos.value && accounts.value.length > 0) return
+    if (!force && loaded.value && accounts.value.length > 0) return
     try {
       const { data } = await api.getFormOptions()
       if (data?.success) {
@@ -24,9 +22,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
         incomeCategories.value  = data.incomeCategories || []
         expenseCategories.value = data.expenseCategories || []
         projects.value          = data.projects || []
-        brands.value            = data.brands || []
-        posCategories.value     = data.posCategories || []
-        loadedPos.value         = true
+        loaded.value            = true
 
         if (typeof window !== 'undefined') {
           window.incomeAccounts    = accounts.value
@@ -52,8 +48,6 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
     incomeCategories,
     expenseCategories,
     projects,
-    brands,
-    posCategories,
     load,
     reload
   }

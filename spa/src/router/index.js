@@ -1,20 +1,16 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 const routes = [
-  { path: '/',           redirect: '/dashboard' },
-  { path: '/dashboard',  component: () => import('@/views/DashboardView.vue'),   meta: { title: 'Inicio', navId: 'navDashboard' } },
-  { path: '/income',     component: () => import('@/views/IncomeView.vue'),      meta: { title: 'Ingresos', navId: 'navIncome' } },
-  { path: '/expense',    component: () => import('@/views/ExpenseView.vue'),     meta: { title: 'Gastos', navId: 'navExpense' } },
-  { path: '/loans',      component: () => import('@/views/LoansView.vue'),       meta: { title: 'Préstamos', navId: 'navLoans' } },
-  { path: '/projects',   component: () => import('@/views/ProjectsView.vue'),    meta: { title: 'Proyectos', navId: 'navProjects' } },
-  { path: '/assets',     component: () => import('@/views/AssetsView.vue'),      meta: { title: 'Activos', navId: 'navAssets' } },
-  { path: '/accounts',   component: () => import('@/views/AccountsView.vue'),    meta: { title: 'Cuentas y Categorías', navId: 'navAccounts' } },
-  { path: '/reports',    component: () => import('@/views/ReportsView.vue'),     meta: { title: 'Reportes Financieros', navId: 'navReport' } },
-  { path: '/settings',   component: () => import('@/views/SettingsView.vue'),    meta: { title: 'Configuración', navId: 'navSetting' } },
-  { path: '/brands',     component: () => import('@/views/BrandsView.vue'),      meta: { title: 'Fabricantes', navId: 'navBrands' } },
-  { path: '/categories', component: () => import('@/views/CategoriesView.vue'),  meta: { title: 'Categorías POS', navId: 'navCategories' } },
-  { path: '/products',   component: () => import('@/views/ProductsView.vue'),    meta: { title: 'Productos', navId: 'navProducts' } },
-  { path: '/orders',     component: () => import('@/views/OrdersView.vue'),      meta: { title: 'Órdenes', navId: 'navOrders' } },
+  { path: '/',          redirect: '/dashboard' },
+  { path: '/dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Inicio', navId: 'navDashboard' } },
+  { path: '/income',    component: () => import('@/views/IncomeView.vue'),    meta: { title: 'Ingresos', navId: 'navIncome' } },
+  { path: '/expense',   component: () => import('@/views/ExpenseView.vue'),   meta: { title: 'Gastos', navId: 'navExpense' } },
+  { path: '/loans',     component: () => import('@/views/LoansView.vue'),     meta: { title: 'Préstamos', navId: 'navLoans' } },
+  { path: '/projects',  component: () => import('@/views/ProjectsView.vue'),  meta: { title: 'Proyectos', navId: 'navProjects' } },
+  { path: '/assets',    component: () => import('@/views/AssetsView.vue'),    meta: { title: 'Activos', navId: 'navAssets' } },
+  { path: '/accounts',  component: () => import('@/views/AccountsView.vue'),  meta: { title: 'Cuentas y Categorías', navId: 'navAccounts' } },
+  { path: '/reports',   component: () => import('@/views/ReportsView.vue'),   meta: { title: 'Reportes Financieros', navId: 'navReport' } },
+  { path: '/settings',  component: () => import('@/views/SettingsView.vue'),  meta: { title: 'Configuración', navId: 'navSetting' } },
 ]
 
 const router = createRouter({

@@ -63,28 +63,6 @@ export const updateSpendingLimit    = (fd) => http.post('php_action/updateSpendi
 export const changeUsername         = (fd) => http.post('php_action/changeUsername.php', fd)
 export const changePassword         = (fd) => http.post('php_action/changePassword.php', fd)
 
-// ─── POS / Inventory ──────────────────────────────────────────────────────────
-export const fetchBrand             = ()   => http.get('php_action/fetchBrand.php')
-export const createBrand            = (fd) => http.post('php_action/createBrand.php', fd)
-export const editBrand              = (fd) => http.post('php_action/editBrand.php', fd)
-export const removeBrand            = (id) => http.post('php_action/removeBrand.php', new URLSearchParams({ brandId: id }))
-export const fetchSelectedBrand     = (id) => http.post('php_action/fetchSelectedBrand.php', new URLSearchParams({ brandId: id }))
-
-export const fetchCategories        = ()   => http.get('php_action/fetchCategories.php')
-export const createCategories       = (fd) => http.post('php_action/createCategories.php', fd)
-export const editCategories         = (fd) => http.post('php_action/editCategories.php', fd)
-export const removeCategories       = (id) => http.post('php_action/removeCategories.php', new URLSearchParams({ categoriesId: id }))
-export const fetchSelectedCategories= (id) => http.post('php_action/fetchSelectedCategories.php', new URLSearchParams({ categoriesId: id }))
-
-export const fetchProduct           = ()   => http.get('php_action/fetchProduct.php')
-export const createProduct          = (fd) => http.post('php_action/createProduct.php', fd)
-export const editProduct            = (fd) => http.post('php_action/editProduct.php', fd)
-export const editProductImage       = (fd) => http.post('php_action/editProductImage.php', fd)
-export const removeProduct          = (id) => http.post('php_action/removeProduct.php', new URLSearchParams({ productId: id }))
-export const fetchSelectedProduct   = (id) => http.post('php_action/fetchSelectedProduct.php', new URLSearchParams({ productId: id }))
-
-export const fetchOrder             = ()   => http.get('php_action/fetchOrder.php')
-
 // ─── Bulk import & templates ──────────────────────────────────────────────────
 export const bulkImport             = (fd)     => http.post('php_action/bulkImport.php', fd)
 export const templateUrl            = (module) => `${getBaseURL()}php_action/downloadTemplate.php?module=${module}&csrf_token=${encodeURIComponent(window.systemCsrfToken || '')}`
