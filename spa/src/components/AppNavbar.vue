@@ -51,6 +51,11 @@
               <i class="glyphicon glyphicon-retweet text-warning"></i> Préstamos
             </router-link>
           </li>
+          <li :class="{ active: route.path === '/debts' || route.path === '/lenders' }">
+            <router-link to="/debts" @click="closeMenus">
+              <i class="glyphicon glyphicon-save text-danger"></i> Deudas
+            </router-link>
+          </li>
           <li :class="{ active: route.path === '/projects' }">
             <router-link to="/projects" @click="closeMenus">
               <i class="glyphicon glyphicon-briefcase text-primary"></i> Proyectos

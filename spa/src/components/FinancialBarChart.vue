@@ -9,7 +9,7 @@
             Reporte Financiero Mensual
           </h4>
           <small class="text-muted">
-            Flujo consolidado de ingresos, gastos, préstamos y proyectos por mes
+            Flujo consolidado de ingresos, gastos, préstamos, prést. recibidos y proyectos por mes
           </small>
         </div>
         <div class="col-xs-12 col-sm-4 text-right" style="margin-top:6px; margin-sm-top:0;">
@@ -68,6 +68,10 @@
               <label class="checkbox-inline" style="margin-left:0; font-size:12px; cursor:pointer;">
                 <input type="checkbox" v-model="visibleCategories.loan" @change="updateSeriesVisibility">
                 <span class="badge" style="background:#2ecc71; padding:3px 7px;">Préstamos</span>
+              </label>
+              <label class="checkbox-inline" style="margin-left:0; font-size:12px; cursor:pointer;">
+                <input type="checkbox" v-model="visibleCategories.debt" @change="updateSeriesVisibility">
+                <span class="badge" style="background:#e74c3c; padding:3px 7px;">Prést. Recibidos</span>
               </label>
               <label class="checkbox-inline" style="margin-left:0; font-size:12px; cursor:pointer;">
                 <input type="checkbox" v-model="visibleCategories.project" @change="updateSeriesVisibility">
@@ -291,6 +295,7 @@ const visibleCategories = reactive({
   income:  true,
   expense: true,
   loan:    true,
+  debt:    true,
   project: true
 })
 
@@ -315,6 +320,7 @@ function categoryColor(cat) {
     case 'income':  return '#3498db'
     case 'expense': return '#5b2c6f'
     case 'loan':    return '#2ecc71'
+    case 'debt':    return '#e74c3c'
     case 'project': return '#e67e22'
     default:        return '#333333'
   }
@@ -404,7 +410,7 @@ function renderChart() {
       }
     },
     title: {
-      text: `Producción de Ingresos, Gastos, Préstamos y Proyectos en ${year}`,
+      text: `Producción de Ingresos, Gastos, Préstamos, Deudas y Proyectos en ${year}`,
       align: 'center',
       style: {
         fontSize: '17px',

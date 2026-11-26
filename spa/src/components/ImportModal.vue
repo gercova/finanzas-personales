@@ -174,6 +174,7 @@ const moduleLabels = {
   income:  'Ingresos',
   expense: 'Gastos',
   loan:    'Préstamos',
+  debt:    'Préstamos Recibidos',
   project: 'Proyectos',
   asset:   'Activos Valiosos'
 }
@@ -181,6 +182,7 @@ const moduleColors = {
   income:  '#27AE60',
   expense: '#C0392B',
   loan:    '#E74C3C',
+  debt:    '#C0392B',
   project: '#2980B9',
   asset:   '#8E44AD'
 }

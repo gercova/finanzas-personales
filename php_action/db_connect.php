@@ -83,6 +83,8 @@ function verifyOwnedEntity(mysqli $connect, string $table, string $pkColumn, int
         'expenses'             => 'expense_id',
         'assets'               => 'asset_id',
         'borrowers'            => 'borrower_id',
+        'debts'                => 'debt_id',
+        'lenders'              => 'lender_id',
     ];
 
     if (!isset($allowedTables[$table]) || $allowedTables[$table] !== $pkColumn) {

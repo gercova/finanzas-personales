@@ -33,6 +33,12 @@ $monthFullNames = [
     9 => 'Setiembre', 10 => 'Octubre', 11 => 'Noviembre', 12 => 'Diciembre'
 ];
 
+$hasDebtsTable = false;
+if ($chkDebt = @$connect->query("SHOW TABLES LIKE 'debts'")) {
+    $hasDebtsTable = ($chkDebt->num_rows > 0);
+    $chkDebt->free();
+}
+
 // 1. Fetch available distinct years across transactions
 $yearsList = [];
 $yearQueries = [
@@ -41,6 +47,9 @@ $yearQueries = [
     "SELECT DISTINCT YEAR(loan_date) AS yr FROM loans WHERE created_by = ? AND is_deleted = 0",
     "SELECT DISTINCT YEAR(COALESCE(start_date, created_at)) AS yr FROM projects WHERE created_by = ? AND is_deleted = 0"
 ];
+if ($hasDebtsTable) {
+    $yearQueries[] = "SELECT DISTINCT YEAR(debt_date) AS yr FROM debts WHERE created_by = ? AND is_deleted = 0";
+}
 foreach ($yearQueries as $q) {
     $stmt = $connect->prepare($q);
     if ($stmt) {
@@ -64,6 +73,7 @@ rsort($availableYears);
 $incomeData  = array_fill(1, 12, 0.0);
 $expenseData = array_fill(1, 12, 0.0);
 $loanData    = array_fill(1, 12, 0.0);
+$debtData    = array_fill(1, 12, 0.0);
 $projectData = array_fill(1, 12, 0.0);
 
 // Incomes by month
@@ -121,6 +131,27 @@ if ($stmt) {
         if ($m >= 1 && $m <= 12) $loanData[$m] = round((float)$r['total'], 2);
     }
     $stmt->close();
+}
+
+// Debts / Received Loans by month (principal_amount)
+if ($hasDebtsTable) {
+    $stmt = $connect->prepare("
+        SELECT MONTH(debt_date) AS m, COALESCE(SUM(principal_amount), 0) AS total
+        FROM debts
+        WHERE created_by = ? AND is_deleted = 0
+          AND YEAR(debt_date) = ?
+        GROUP BY MONTH(debt_date)
+    ");
+    if ($stmt) {
+        $stmt->bind_param("ii", $userId, $year);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($r = $res->fetch_assoc()) {
+            $m = (int)$r['m'];
+            if ($m >= 1 && $m <= 12) $debtData[$m] = round((float)$r['total'], 2);
+        }
+        $stmt->close();
+    }
 }
 
 // Projects by month: expenses linked to projects + incomes linked to projects + new project budgets
@@ -211,6 +242,13 @@ $allSeries = [
         'data'  => array_values($loanData)
     ],
     [
+        'id'    => 'debt',
+        'key'   => 'debt',
+        'name'  => 'Prést. Recibidos',
+        'color' => '#e74c3c', // crimson red
+        'data'  => array_values($debtData)
+    ],
+    [
         'id'    => 'project',
         'key'   => 'project',
         'name'  => 'Proyectos',
@@ -224,6 +262,7 @@ $totals = [
     'income'  => array_sum($incomeData),
     'expense' => array_sum($expenseData),
     'loan'    => array_sum($loanData),
+    'debt'    => array_sum($debtData),
     'project' => array_sum($projectData)
 ];
 
@@ -370,6 +409,59 @@ if (!empty($_GET['drilldown']) || $action === 'drilldown') {
             }
             $stmt->close();
         }
+    } elseif ($reqCategory === 'debt' && $hasDebtsTable) {
+        $lenderTypeLabels = [
+            'PERSONA'            => 'Persona Natural',
+            'EMPRESA'            => 'Empresa',
+            'ENTIDAD_FINANCIERA' => 'Entidad Financiera / Banco',
+        ];
+        $sql = "
+            SELECT d.debt_id AS id, d.debt_date AS date, d.lender_name, d.lender_type, d.concept,
+                   d.principal_amount AS amount, d.total_payable, d.amount_paid, d.balance_pending,
+                   d.status, d.notes, COALESCE(a.account_name, 'Sin Cuenta') AS account_name,
+                   l.document_type, l.document_number
+            FROM debts d
+            LEFT JOIN accounts a ON d.account_id = a.account_id
+            LEFT JOIN lenders l ON d.lender_id = l.lender_id
+            WHERE d.created_by = ? AND d.is_deleted = 0 AND YEAR(d.debt_date) = ?
+        ";
+        if ($reqMonth) $sql .= " AND MONTH(d.debt_date) = " . (int)$reqMonth;
+        $sql .= " ORDER BY d.debt_date DESC";
+
+        $stmt = $connect->prepare($sql);
+        if ($stmt) {
+            $stmt->bind_param("ii", $userId, $year);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            while ($r = $res->fetch_assoc()) {
+                $amt = (float)$r['amount'];
+                $totalDrill += $amt;
+                $typeLabel = $lenderTypeLabels[$r['lender_type']] ?? $r['lender_type'];
+                $catKey = $typeLabel . ' (' . $r['status'] . ')';
+                if (!isset($breakdown[$catKey])) {
+                    $breakdown[$catKey] = ['name' => $catKey, 'total' => 0.0, 'count' => 0];
+                }
+                $breakdown[$catKey]['total'] += $amt;
+                $breakdown[$catKey]['count']++;
+                $items[] = [
+                    'id'            => (int)$r['id'],
+                    'date'          => $r['date'],
+                    'concept'       => $r['concept'],
+                    'lender_name'   => $r['lender_name'],
+                    'lender_type'   => $typeLabel,
+                    'document_info' => !empty($r['document_number']) ? ($r['document_type'] . ': ' . $r['document_number']) : $typeLabel,
+                    'amount'        => $amt,
+                    'category_name' => $r['lender_name'],
+                    'account_name'  => $r['account_name'],
+                    'status'        => $r['status'],
+                    'payable'       => (float)$r['total_payable'],
+                    'paid'          => (float)$r['amount_paid'],
+                    'pending'       => (float)$r['balance_pending'],
+                    'notes'         => $r['notes'] ?: ''
+                ];
+            }
+            $stmt->close();
+        }
     } elseif ($reqCategory === 'project') {
         // Project items: projects + project transactions
         $sql = "
@@ -462,6 +554,7 @@ if (!empty($_GET['drilldown']) || $action === 'drilldown') {
         'income'  => 'Ingresos',
         'expense' => 'Gastos',
         'loan'    => 'Préstamos',
+        'debt'    => 'Prést. Recibidos',
         'project' => 'Proyectos'
     ];
 

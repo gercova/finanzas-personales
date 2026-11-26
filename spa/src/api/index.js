@@ -41,6 +41,22 @@ export const editBorrower        = (fd) => http.post('php_action/editBorrower.ph
 export const removeBorrower      = (id) => http.post('php_action/removeBorrower.php', new URLSearchParams({ id }))
 export const lookupDecolecta     = (type, number) => http.get('php_action/lookupDecolecta.php', { params: { type, number } })
 
+// ─── Debts (Préstamos Recibidos / Deudas) ─────────────────────────────────────
+export const fetchDebts          = ()      => http.get('php_action/fetchDebts.php')
+export const getDebtData         = (id)    => http.get('php_action/getDebtData.php', { params: { id } })
+export const createDebt          = (fd)    => http.post('php_action/createDebt.php', fd)
+export const editDebt            = (fd)    => http.post('php_action/editDebt.php', fd)
+export const removeDebt          = (id)    => http.post('php_action/removeDebt.php', new URLSearchParams({ debt_id: id }))
+export const updateDebtStatus    = (id, s) => http.post('php_action/updateDebtStatus.php', new URLSearchParams({ debt_id: id, status: s }))
+export const addDebtPayment      = (fd)    => http.post('php_action/addDebtPayment.php', fd)
+
+// ─── Lenders (Acreedores / Entidades) ─────────────────────────────────────────
+export const fetchLenders        = ()   => http.get('php_action/fetchLenders.php')
+export const getLenderData       = (id) => http.get('php_action/getLenderData.php', { params: { id } })
+export const createLender        = (fd) => http.post('php_action/createLender.php', fd)
+export const editLender          = (fd) => http.post('php_action/editLender.php', fd)
+export const removeLender        = (id) => http.post('php_action/removeLender.php', new URLSearchParams({ id }))
+
 // ─── Projects ─────────────────────────────────────────────────────────────────
 export const fetchProjects       = ()   => http.get('php_action/fetchProjects.php')
 export const getProjectData      = (id) => http.get('php_action/getProjectData.php', { params: { id } })

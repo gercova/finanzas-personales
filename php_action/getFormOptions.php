@@ -8,7 +8,7 @@ header('Content-Type: application/json; charset=utf-8');
 
 $userId = (int)$_SESSION['userId'];
 
-$accounts = $incomeCategories = $expenseCategories = $projects = $borrowers = [];
+$accounts = $incomeCategories = $expenseCategories = $projects = $borrowers = $lenders = [];
 
 $stmt = $connect->prepare("SELECT account_id AS id, account_name, account_type FROM accounts WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY account_name");
 if ($stmt) {
@@ -55,6 +55,19 @@ if ($stmt) {
     $stmt->close();
 }
 
+$chkLenders = @$connect->query("SHOW TABLES LIKE 'lenders'");
+if ($chkLenders && $chkLenders->num_rows > 0) {
+    $stmt = $connect->prepare("SELECT lender_id AS id, lender_type, full_name, document_type, document_number, phone, address FROM lenders WHERE created_by=? AND status=1 AND is_deleted=0 ORDER BY full_name");
+    if ($stmt) {
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        while ($row = $res->fetch_assoc()) $lenders[] = $row;
+        $stmt->close();
+    }
+}
+if ($chkLenders) $chkLenders->free();
+
 echo json_encode([
     'success'           => true,
     'accounts'          => $accounts,
@@ -62,4 +75,5 @@ echo json_encode([
     'expenseCategories' => $expenseCategories,
     'projects'          => $projects,
     'borrowers'         => $borrowers,
+    'lenders'           => $lenders,
 ], JSON_UNESCAPED_UNICODE);

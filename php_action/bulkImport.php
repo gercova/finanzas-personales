@@ -31,7 +31,7 @@ if (!verifyCsrfToken()) {
 
 $userId  = (int)$_SESSION['userId'];
 $module  = strtolower(trim($_POST['module'] ?? ''));
-$allowed = ['income', 'expense', 'loan', 'project', 'asset'];
+$allowed = ['income', 'expense', 'loan', 'debt', 'project', 'asset'];
 
 if (!in_array($module, $allowed, true)) {
     echo json_encode(['success' => false, 'messages' => 'Módulo no reconocido.']);
@@ -579,11 +579,99 @@ function processAsset(array $rows, int $userId, mysqli $db): array
     return compact('inserted', 'errors');
 }
 
+/* ── DEBT (Préstamos Recibidos) ──────────────────────────────────── */
+function processDebt(array $rows, int $userId, mysqli $db): array
+{
+    /*
+     * 0 lender_name | 1 lender_type | 2 concept | 3 account_name | 4 debt_date
+     * 5 due_date | 6 principal_amount | 7 interest_type | 8 interest_value | 9 notes
+     */
+    $accounts = getUserAccounts($db, $userId);
+
+    $stmt = $db->prepare(
+        "INSERT INTO debts (lender_name, lender_type, concept, account_id, debt_date, due_date,
+                            principal_amount, interest_type, interest_value, total_payable,
+                            amount_paid, balance_pending, status, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'PENDIENTE', ?, ?)"
+    );
+
+    $inserted = 0;
+    $errors   = [];
+
+    foreach ($rows as $i => $row) {
+        $rowNum    = $i + 2;
+        $rowErrors = [];
+
+        $lender      = cell($row, 0);
+        $lenderType  = strtoupper(cell($row, 1)) ?: 'PERSONA';
+        $concept     = cell($row, 2);
+        $accountName = strtolower(cell($row, 3));
+        $debtDateRaw = $row[4] ?? null;
+        $dueDateRaw  = $row[5] ?? null;
+        $principalRaw= cell($row, 6);
+        $intType     = strtoupper(cell($row, 7)) ?: 'NONE';
+        $intValueRaw = cell($row, 8);
+        $notes       = cell($row, 9);
+
+        if (empty($lender))  $rowErrors[] = ['field' => 'Acreedor / Entidad', 'message' => 'Campo requerido.'];
+        if (empty($concept)) $rowErrors[] = ['field' => 'Concepto', 'message' => 'Campo requerido.'];
+
+        if (!in_array($lenderType, ['PERSONA', 'EMPRESA', 'ENTIDAD_FINANCIERA'], true)) {
+            $lenderType = 'PERSONA';
+        }
+
+        $accountId = $accounts[$accountName] ?? null;
+        if (!$accountId) $rowErrors[] = ['field' => 'Cuenta Destino', 'message' => "\"" . cell($row, 3) . "\" no encontrada o no le pertenece."];
+
+        $debtDate = resolveDate($debtDateRaw);
+        if (!$debtDate) $rowErrors[] = ['field' => 'Fecha Préstamo', 'message' => 'Formato inválido.'];
+
+        $dueDate = $dueDateRaw ? resolveDate($dueDateRaw) : null;
+
+        $principal = is_numeric($principalRaw) ? (float)$principalRaw : null;
+        if ($principal === null || $principal <= 0) $rowErrors[] = ['field' => 'Capital', 'message' => 'Debe ser un número mayor a 0.'];
+
+        $intTypeMap = ['NINGUNO' => 'NONE', 'PORCENTAJE' => 'PERCENTAGE', 'FIJO' => 'FIXED'];
+        $intType    = $intTypeMap[$intType] ?? $intType;
+        if (!in_array($intType, ['NONE', 'PERCENTAGE', 'FIXED'], true)) $intType = 'NONE';
+
+        $intValue = is_numeric($intValueRaw) && $intValueRaw > 0 ? (float)$intValueRaw : null;
+
+        if ($rowErrors) {
+            foreach ($rowErrors as $e) $errors[] = array_merge(['row' => $rowNum], $e);
+            continue;
+        }
+
+        if ($intType === 'PERCENTAGE' && $intValue > 0) {
+            $total = $principal + ($principal * $intValue / 100);
+        } elseif ($intType === 'FIXED' && $intValue > 0) {
+            $total = $principal + $intValue;
+        } else {
+            $total    = $principal;
+            $intValue = null;
+        }
+
+        // Account balance update handled automatically by trg_debts_after_insert
+        $stmt->bind_param("sssissdsdddsi",
+            $lender, $lenderType, $concept, $accountId, $debtDate, $dueDate,
+            $principal, $intType, $intValue, $total, $total, $notes, $userId
+        );
+        if ($stmt->execute()) {
+            $inserted++;
+        } else {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        }
+    }
+    $stmt->close();
+    return compact('inserted', 'errors');
+}
+
 /* ── Dispatch ────────────────────────────────────────────────────── */
 switch ($module) {
     case 'income':  $result = processIncome($rows, $userId, $connect);  break;
     case 'expense': $result = processExpense($rows, $userId, $connect); break;
     case 'loan':    $result = processLoan($rows, $userId, $connect);    break;
+    case 'debt':    $result = processDebt($rows, $userId, $connect);    break;
     case 'project': $result = processProject($rows, $userId, $connect); break;
     case 'asset':   $result = processAsset($rows, $userId, $connect);   break;
     default:

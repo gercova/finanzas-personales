@@ -12,6 +12,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
   const expenseCategories = ref([])
   const projects          = ref([])
   const borrowers         = ref([])
+  const lenders           = ref([])
   const loaded            = ref(false)
 
   async function load(force = false) {
@@ -24,6 +25,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
         expenseCategories.value = data.expenseCategories || []
         projects.value          = data.projects || []
         borrowers.value         = data.borrowers || []
+        lenders.value           = data.lenders || []
         loaded.value            = true
       }
     } catch (e) {
@@ -41,6 +43,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
     expenseCategories.value = []
     projects.value          = []
     borrowers.value         = []
+    lenders.value           = []
     loaded.value            = false
   }
 
@@ -50,6 +53,7 @@ export const useFormOptionsStore = defineStore('formOptions', () => {
     expenseCategories,
     projects,
     borrowers,
+    lenders,
     loaded,
     load,
     reload,

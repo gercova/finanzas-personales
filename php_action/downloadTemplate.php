@@ -22,7 +22,7 @@ if (!isset($_SESSION['userId'])) {
 }
 
 $module  = strtolower(trim($_GET['module'] ?? ''));
-$allowed = ['income', 'expense', 'loan', 'project', 'asset'];
+$allowed = ['income', 'expense', 'loan', 'debt', 'project', 'asset'];
 if (!in_array($module, $allowed, true)) {
     http_response_code(400);
     exit('Módulo no reconocido.');
@@ -77,6 +77,23 @@ $templates = [
             ['Tipo de Interés',     'NONE',                                'Valores: NONE, PERCENTAGE, FIXED (o NINGUNO, PORCENTAJE, FIJO). Por defecto: NONE.'],
             ['Valor Interés',       '',                                     'Si tipo es PERCENTAGE: porcentaje (ej. 5 para 5%). Si FIXED: monto fijo. Dejar vacío si NONE.'],
             ['Notas',               'Acuerdo verbal del 15/06/2026',       'Observaciones adicionales. Opcional.'],
+        ],
+    ],
+    'debt' => [
+        'title'    => 'Plantilla de Préstamos Recibidos',
+        'filename' => 'plantilla_prestamos_recibidos.xlsx',
+        'color'    => 'C0392B',
+        'columns'  => [
+            ['Acreedor / Entidad *', 'Banco de Crédito (BCP)',              'Persona, empresa o banco que otorga el préstamo. Requerido.'],
+            ['Tipo Acreedor',        'ENTIDAD_FINANCIERA',                  'Valores: PERSONA, EMPRESA, ENTIDAD_FINANCIERA. Por defecto: PERSONA.'],
+            ['Concepto *',           'Préstamo capital de trabajo',         'Descripción del préstamo recibido. Requerido.'],
+            ['Cuenta Destino *',     'Cuenta Principal',                    'Cuenta donde ingresa el dinero recibido. Requerido.'],
+            ['Fecha Préstamo *',     date('Y-m-d'),                         'Formato: YYYY-MM-DD o DD/MM/YYYY. Requerido.'],
+            ['Fecha Vencimiento',    date('Y-m-d', strtotime('+6 months')), 'Formato: YYYY-MM-DD o DD/MM/YYYY. Opcional.'],
+            ['Capital *',            '5000.00',                             'Monto principal recibido. Número mayor a 0.'],
+            ['Tipo de Interés',      'PERCENTAGE',                          'Valores: NONE, PERCENTAGE, FIXED. Por defecto: NONE.'],
+            ['Valor Interés',        '8.5',                                 'Porcentaje o monto fijo según tipo. Dejar vacío si NONE.'],
+            ['Notas',                'Crédito en 12 cuotas',                'Observaciones adicionales. Opcional.'],
         ],
     ],
     'project' => [
