@@ -1,6 +1,12 @@
 # Project Design Report (PDR)
 ## myFin — Personal Finance & Wealth Management System
 
+<p align="left">
+  <strong>🌐 Language / Idioma:</strong>
+  <strong>English</strong> |
+  <a href="PDR.es.md">Español</a>
+</p>
+
 **Document Version:** 2.0.0  
 **Status:** Approved / Production Ready  
 **Architecture:** Modern Multi-Tenant Single-Page Application (SPA)  
