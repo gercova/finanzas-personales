@@ -16,12 +16,13 @@ $stmt = $connect->prepare("
     WHERE l.created_by = ? AND l.is_deleted = 0
     ORDER BY l.loan_date DESC
 ");
-if (!$stmt) { echo json_encode(['data'=>[]]); exit; }
+if (!$stmt) { echo json_encode(['data'=>[], 'meta'=>[]]); exit; }
 $stmt->bind_param("i", $userId);
 $stmt->execute();
 $result = $stmt->get_result();
 
 $data = [];
+$meta = [];
 $no = 1;
 while ($row = $result->fetch_assoc()) {
     $status = $row['status'];
@@ -99,6 +100,27 @@ while ($row = $result->fetch_assoc()) {
         $badgeHtml,
         $actions
     ];
+
+    $meta[] = [
+        'id'               => (int)$row['id'],
+        'borrower_id'      => $row['borrower_id'] ? (int)$row['borrower_id'] : null,
+        'borrower_name'    => (string)($row['borrower_name'] ?? ''),
+        'document_type'    => (string)($row['document_type'] ?? ''),
+        'document_number'  => (string)($row['document_number'] ?? ''),
+        'concept'          => (string)($row['concept'] ?? ''),
+        'notes'            => (string)($row['notes'] ?? ''),
+        'account_id'       => $row['account_id'] ? (int)$row['account_id'] : null,
+        'account_name'     => (string)($row['account_name'] ?? ''),
+        'loan_date'        => $row['loan_date'] ? date('Y-m-d', strtotime($row['loan_date'])) : '',
+        'due_date'         => $row['due_date'] ? date('Y-m-d', strtotime($row['due_date'])) : '',
+        'principal_amount' => (float)$row['principal_amount'],
+        'interest_type'    => (string)($row['interest_type'] ?? 'NONE'),
+        'interest_value'   => (float)$row['interest_value'],
+        'total_receivable' => (float)$row['total_receivable'],
+        'amount_repaid'    => (float)$row['amount_repaid'],
+        'balance_pending'  => (float)$row['balance_pending'],
+        'status'           => (string)$status,
+    ];
 }
 $stmt->close();
-echo json_encode(['data' => $data]);
+echo json_encode(['data' => $data, 'meta' => $meta]);

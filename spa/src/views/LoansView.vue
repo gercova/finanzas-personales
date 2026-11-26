@@ -32,7 +32,9 @@
             <div class="panel-heading"><i class="glyphicon glyphicon-share-alt"></i> Total Prestado</div>
             <div class="panel-body text-center">
               <h3 style="margin:0;font-weight:700;" class="text-danger">S/ {{ fmt(loanStats.prestado) }}</h3>
-              <small class="text-muted">préstamos activos</small>
+              <small class="text-muted">
+                {{ (store.activeFilterCount > 0 || store.search) ? 'total filtrado' : 'préstamos activos' }}
+              </small>
             </div>
           </div>
         </div>
@@ -41,7 +43,9 @@
             <div class="panel-heading"><i class="glyphicon glyphicon-ok-sign"></i> Total Cobrado</div>
             <div class="panel-body text-center">
               <h3 style="margin:0;font-weight:700;" class="text-success">S/ {{ fmt(loanStats.cobrado) }}</h3>
-              <small class="text-muted">recuperado</small>
+              <small class="text-muted">
+                {{ (store.activeFilterCount > 0 || store.search) ? 'recuperado (filtrado)' : 'recuperado' }}
+              </small>
             </div>
           </div>
         </div>
@@ -50,16 +54,43 @@
             <div class="panel-heading"><i class="glyphicon glyphicon-time"></i> Total Pendiente</div>
             <div class="panel-body text-center">
               <h3 style="margin:0;font-weight:700;" class="text-warning">S/ {{ fmt(loanStats.pendiente) }}</h3>
-              <small class="text-muted">por cobrar</small>
+              <small class="text-muted">
+                {{ (store.activeFilterCount > 0 || store.search) ? 'por cobrar (filtrado)' : 'por cobrar' }}
+              </small>
             </div>
           </div>
         </div>
       </div>
 
-      <div style="margin-bottom:12px;">
-        <span class="label" style="background:#e74c3c;padding:4px 10px;">PENDIENTE</span>&nbsp;
-        <span class="label" style="background:#f39c12;padding:4px 10px;">PARCIAL</span>&nbsp;
-        <span class="label" style="background:#8e44ad;padding:4px 10px;">PAGADO</span>
+      <div style="margin-bottom:12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+        <button type="button" class="btn btn-xs"
+                :style="{ background:'#e74c3c', color:'#fff', border: store.filters.status==='PENDIENTE' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+                @click="toggleStatusQuick('PENDIENTE')">
+          PENDIENTE
+        </button>
+        <button type="button" class="btn btn-xs"
+                :style="{ background:'#f39c12', color:'#fff', border: store.filters.status==='PARCIAL' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+                @click="toggleStatusQuick('PARCIAL')">
+          PARCIAL
+        </button>
+        <button type="button" class="btn btn-xs"
+                :style="{ background:'#8e44ad', color:'#fff', border: store.filters.status==='PAGADO' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+                @click="toggleStatusQuick('PAGADO')">
+          PAGADO
+        </button>
+        <button type="button" class="btn btn-xs btn-default"
+                :class="{ active: store.filters.status==='UNPAID' }"
+                @click="toggleStatusQuick('UNPAID')">
+          <i class="glyphicon glyphicon-hourglass text-warning"></i> Por cobrar
+        </button>
+        <button type="button" class="btn btn-xs btn-default"
+                :class="{ active: store.filters.status==='OVERDUE' }"
+                @click="toggleStatusQuick('OVERDUE')">
+          <i class="glyphicon glyphicon-exclamation-sign text-danger"></i> Vencidos
+        </button>
+        <button v-if="store.filters.status" type="button" class="btn btn-xs btn-link" style="padding:2px 6px;" @click="store.filters.status = ''">
+          Ver todos
+        </button>
       </div>
 
       <div class="panel panel-default">
@@ -76,6 +107,123 @@
             <button class="btn btn-danger" @click="openAdd">
               <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo
             </button>
+          </template>
+
+          <template #filters>
+            <div style="background:#f9f9f9; border:1px solid #e5e5e5; border-radius:4px; padding:10px 12px; margin-bottom:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+                <div style="font-size:12.5px; font-weight:700; color:#444;">
+                  <i class="glyphicon glyphicon-filter text-primary"></i> Filtros de búsqueda
+                  <span v-if="store.activeFilterCount > 0" class="badge" style="background:#337ab7; margin-left:4px;">
+                    {{ store.activeFilterCount }}
+                  </span>
+                </div>
+                <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                  <span class="text-muted" style="font-size:11px; margin-right:2px;">Rango rápido:</span>
+                  <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('today')">Hoy</button>
+                  <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('this_month')">Este mes</button>
+                  <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('last_month')">Mes ant.</button>
+                  <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('this_year')">Este año</button>
+                  <button
+                    v-if="store.activeFilterCount > 0 || store.search"
+                    type="button"
+                    class="btn btn-xs btn-danger"
+                    style="margin-left:6px;"
+                    @click="store.resetFilters()"
+                  >
+                    <i class="glyphicon glyphicon-remove"></i> Limpiar filtros
+                  </button>
+                </div>
+              </div>
+
+              <div class="row" style="margin-bottom:8px;">
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-user"></i> Prestatario
+                  </label>
+                  <select class="form-control input-sm" v-model="store.filters.borrower">
+                    <option value="">Todos los prestatarios</option>
+                    <option v-for="b in borrowerFilterOptions" :key="b.value" :value="b.value">
+                      {{ b.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-credit-card"></i> Cuenta de Origen
+                  </label>
+                  <select class="form-control input-sm" v-model="store.filters.accountId">
+                    <option value="">Todas las cuentas</option>
+                    <option v-for="a in accountFilterOptions" :key="a.value" :value="a.value">
+                      {{ a.label }}
+                    </option>
+                  </select>
+                </div>
+
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-tag"></i> Estado del Préstamo
+                  </label>
+                  <select class="form-control input-sm" v-model="store.filters.status">
+                    <option value="">Todos los estados</option>
+                    <option value="PENDIENTE">Pendientes</option>
+                    <option value="PARCIAL">Parciales</option>
+                    <option value="UNPAID">Por cobrar (Pendiente / Parcial)</option>
+                    <option value="PAGADO">Pagados</option>
+                    <option value="OVERDUE">Vencidos (Con mora)</option>
+                  </select>
+                </div>
+
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-usd"></i> Capital (S/)
+                  </label>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="number" step="0.01" min="0" class="form-control input-sm" placeholder="Mín." v-model="store.filters.minAmount" />
+                    <span class="text-muted">-</span>
+                    <input type="number" step="0.01" min="0" class="form-control input-sm" placeholder="Máx." v-model="store.filters.maxAmount" />
+                  </div>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:4px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-calendar"></i> Filtrar por Fecha
+                  </label>
+                  <select class="form-control input-sm" v-model="store.filters.dateField">
+                    <option value="loan_date">Fecha de Préstamo</option>
+                    <option value="due_date">Fecha de Vencimiento</option>
+                  </select>
+                </div>
+
+                <div class="col-xs-6 col-sm-3 col-md-3" style="margin-bottom:4px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    Desde
+                  </label>
+                  <input type="date" class="form-control input-sm" v-model="store.filters.dateFrom" />
+                </div>
+
+                <div class="col-xs-6 col-sm-3 col-md-3" style="margin-bottom:4px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    Hasta
+                  </label>
+                  <input type="date" class="form-control input-sm" v-model="store.filters.dateTo" />
+                </div>
+
+                <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:4px;">
+                  <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                    <i class="glyphicon glyphicon-percent"></i> Interés
+                  </label>
+                  <select class="form-control input-sm" v-model="store.filters.interestFilter">
+                    <option value="">Todos (Con / Sin interés)</option>
+                    <option value="WITH">Con interés</option>
+                    <option value="NONE">Sin interés</option>
+                  </select>
+                </div>
+              </div>
+            </div>
           </template>
         </DataTable>
       </div>
@@ -277,15 +425,111 @@ const openedFromLoan    = ref(false)
 const accounts  = computed(() => optionsStore.accounts)
 const borrowers = computed(() => optionsStore.borrowers)
 
+const borrowerFilterOptions = computed(() => {
+  const list = []
+  const seenIds = new Set()
+  const seenNames = new Set()
+
+  for (const b of borrowers.value) {
+    const id = parseInt(b.id, 10)
+    const name = String(b.full_name || '').trim()
+    if (!name) continue
+    seenIds.add(id)
+    seenNames.add(name.toLowerCase())
+    const doc = b.document_number ? ` (${b.document_type || 'DOC'} ${b.document_number})` : ''
+    list.push({
+      value: `id:${id}|${name}`,
+      label: `${name}${doc}`,
+    })
+  }
+
+  for (const m of store.meta) {
+    const name = String(m.borrower_name || '').trim()
+    if (!name) continue
+    if (m.borrower_id && !seenIds.has(m.borrower_id)) {
+      seenIds.add(m.borrower_id)
+      seenNames.add(name.toLowerCase())
+      list.push({
+        value: `id:${m.borrower_id}|${name}`,
+        label: name,
+      })
+    } else if (!m.borrower_id && !seenNames.has(name.toLowerCase())) {
+      seenNames.add(name.toLowerCase())
+      list.push({
+        value: `name:${name.toLowerCase()}`,
+        label: name,
+      })
+    }
+  }
+
+  return list.sort((a, b) => a.label.localeCompare(b.label, 'es'))
+})
+
+const accountFilterOptions = computed(() => {
+  const list = []
+  const seenIds = new Set()
+  const seenNames = new Set()
+
+  for (const a of accounts.value) {
+    const id = String(a.id)
+    const name = String(a.account_name || '').trim()
+    if (!name) continue
+    seenIds.add(id)
+    seenNames.add(name.toLowerCase())
+    list.push({ value: id, label: name })
+  }
+
+  for (const m of store.meta) {
+    const name = String(m.account_name || '').trim()
+    if (!name || name === '-') continue
+    if (m.account_id && !seenIds.has(String(m.account_id))) {
+      seenIds.add(String(m.account_id))
+      seenNames.add(name.toLowerCase())
+      list.push({ value: String(m.account_id), label: name })
+    } else if (!m.account_id && !seenNames.has(name.toLowerCase())) {
+      seenNames.add(name.toLowerCase())
+      list.push({ value: `name:${name.toLowerCase()}`, label: name })
+    }
+  }
+
+  return list.sort((a, b) => a.label.localeCompare(b.label, 'es'))
+})
+
+function toggleStatusQuick(status) {
+  store.filters.status = store.filters.status === status ? '' : status
+}
+
+function toISODate(d) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+function applyDatePreset(preset) {
+  const now = new Date()
+  if (preset === 'today') {
+    const iso = toISODate(now)
+    store.filters.dateFrom = iso
+    store.filters.dateTo = iso
+  } else if (preset === 'this_month') {
+    store.filters.dateFrom = toISODate(new Date(now.getFullYear(), now.getMonth(), 1))
+    store.filters.dateTo = toISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+  } else if (preset === 'last_month') {
+    store.filters.dateFrom = toISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1))
+    store.filters.dateTo = toISODate(new Date(now.getFullYear(), now.getMonth(), 0))
+  } else if (preset === 'this_year') {
+    store.filters.dateFrom = `${now.getFullYear()}-01-01`
+    store.filters.dateTo = `${now.getFullYear()}-12-31`
+  }
+}
+
 const loanStats = computed(() => {
   let prestado = 0, cobrado = 0, pendiente = 0
-  for (const r of store.rows) {
-    const pStr = String(r[8] || '').replace(/[^0-9.]/g, '')
-    const cStr = String(r[9] || '').replace(/[^0-9.]/g, '')
-    const dStr = String(r[10] || '').replace(/[^0-9.]/g, '')
-    prestado  += parseFloat(pStr) || 0
-    cobrado   += parseFloat(cStr) || 0
-    pendiente += parseFloat(dStr) || 0
+  for (const m of store.filteredMeta) {
+    prestado  += m.total_receivable || 0
+    cobrado   += m.amount_repaid || 0
+    pendiente += m.balance_pending || 0
   }
   return { prestado, cobrado, pendiente }
 })

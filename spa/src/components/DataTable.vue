@@ -21,6 +21,7 @@
 
     <!-- Search + page-size row -->
     <div class="panel-body" style="padding-bottom:4px;">
+      <slot name="filters" />
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
         <div>
           <input class="form-control input-sm"
