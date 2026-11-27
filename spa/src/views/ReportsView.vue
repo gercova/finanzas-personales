@@ -10,11 +10,11 @@
       <h3 style="margin:0; font-size:20px; font-weight:700; color:#333;">
         <i class="glyphicon glyphicon-stats text-info" style="margin-right:6px;"></i> Resumen Financiero Ejecutivo
       </h3>
-      <div style="display:inline-flex; gap:6px;">
-        <button class="btn btn-sm btn-default" @click="refreshAll" :disabled="loading">
+      <div style="display:inline-flex; gap:8px;">
+        <button type="button" class="btn btn-sm btn-import" @click="refreshAll" :disabled="loading">
           <i class="glyphicon glyphicon-refresh" :class="{ 'spin-icon': loading }"></i> Actualizar
         </button>
-        <button class="btn btn-sm btn-info" @click="printReport">
+        <button type="button" class="btn btn-sm btn-info" @click="printReport">
           <i class="glyphicon glyphicon-print"></i> Imprimir Reporte
         </button>
       </div>

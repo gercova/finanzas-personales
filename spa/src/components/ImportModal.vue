@@ -30,7 +30,7 @@
         </div>
 
         <div class="text-center" style="margin-bottom:16px;">
-          <a :href="templateHref" class="btn btn-default btn-sm" target="_blank">
+          <a :href="templateHref" class="btn btn-template-dl" target="_blank">
             <i class="glyphicon glyphicon-download-alt"></i> Descargar Plantilla (.xlsx)
           </a>
         </div>

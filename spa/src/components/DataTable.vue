@@ -16,7 +16,7 @@
         <i v-if="icon" :class="'glyphicon ' + icon" style="margin-right:8px;"></i>
         {{ title }}
       </div>
-      <div style="display:flex;gap:6px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;">
         <slot name="actions" />
       </div>
     </div>

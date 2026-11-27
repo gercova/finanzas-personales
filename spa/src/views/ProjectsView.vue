@@ -13,10 +13,10 @@
         :store="store"
       >
         <template #actions>
-          <button class="btn btn-default btn-sm" @click="importRef.open()">
+          <button type="button" class="btn btn-import" @click="importRef.open()">
             <i class="glyphicon glyphicon-upload"></i> Importar
           </button>
-          <button class="btn btn-primary" @click="openAdd">
+          <button type="button" class="btn btn-primary" @click="openAdd">
             <i class="glyphicon glyphicon-plus-sign"></i> Nuevo Proyecto
           </button>
         </template>

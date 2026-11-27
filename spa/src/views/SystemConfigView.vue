@@ -117,8 +117,8 @@
               <i class="glyphicon glyphicon-wrench text-primary" style="margin-right:8px;"></i>
               Integración y Ejecución de Migraciones SQL
             </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <button class="btn btn-default btn-sm" @click="loadConfig" :disabled="runningMigration">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="btn btn-import btn-sm" @click="loadConfig" :disabled="runningMigration">
                 <i class="glyphicon glyphicon-refresh"></i> Actualizar
               </button>
               <button class="btn btn-success btn-sm" @click="openIntegrateModal" :disabled="runningMigration">

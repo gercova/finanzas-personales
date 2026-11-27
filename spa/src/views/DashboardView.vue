@@ -86,7 +86,7 @@
             <div class="page-heading" style="font-size:14px; font-weight:600;">
               <i class="glyphicon glyphicon-credit-card text-primary"></i> Mis Cuentas
             </div>
-            <router-link to="/accounts" class="btn btn-xs btn-default">
+            <router-link to="/accounts" class="btn-panel-subtle">
               <i class="glyphicon glyphicon-cog"></i> Administrar
             </router-link>
           </div>
@@ -167,13 +167,13 @@
               <i class="glyphicon glyphicon-calendar text-info"></i> Calendario Financiero
             </div>
             <!-- Calendar Navigation -->
-            <div style="display:inline-flex; align-items:center; gap:6px;">
-              <button class="btn btn-xs btn-default" @click="prevMonth" title="Mes Anterior">&lsaquo;</button>
-              <span style="font-weight:700; font-size:13px; min-width:130px; text-align:center;">
+            <div class="cal-nav-group">
+              <button type="button" class="cal-nav-btn" @click="prevMonth" title="Mes Anterior">&lsaquo;</button>
+              <span style="font-weight:700; font-size:13px; min-width:130px; text-align:center; color:#1e293b;">
                 {{ currentMonthDisplay }}
               </span>
-              <button class="btn btn-xs btn-default" @click="nextMonth" title="Mes Siguiente">&rsaquo;</button>
-              <button class="btn btn-xs btn-primary" @click="goToToday" style="margin-left:4px;">Hoy</button>
+              <button type="button" class="cal-nav-btn" @click="nextMonth" title="Mes Siguiente">&rsaquo;</button>
+              <button type="button" class="cal-today-btn" @click="goToToday" style="margin-left:2px;">Hoy</button>
             </div>
           </div>
           <div class="panel-body" style="padding: 10px;">

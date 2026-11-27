@@ -39,7 +39,294 @@ nav.navbar:hover {
 .panel-heading-flex .btn {
   margin: 0 !important;
   vertical-align: middle;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Flat, Solid, Uniform Button System (Zero Gradients)
+   ========================================================================== */
+.btn,
+.btn-default,
+.btn-primary,
+.btn-success,
+.btn-info,
+.btn-warning,
+.btn-danger {
+  background-image: none !important;
+  text-shadow: none !important;
+  box-shadow: none !important;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-default {
+  background-color: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+.btn-default:hover,
+.btn-default:focus,
+.btn-default:active,
+.open > .dropdown-toggle.btn-default {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+.btn-default.active {
+  background-color: #e2e8f0;
+  border-color: #64748b;
+  color: #0f172a;
+}
+
+.btn-primary {
+  background-color: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active {
+  background-color: #1d4ed8;
+  border-color: #1e40af;
+  color: #ffffff;
+}
+
+.btn-success {
+  background-color: #1f8a4c;
+  border-color: #19723e;
+  color: #ffffff;
+}
+.btn-success:hover,
+.btn-success:focus,
+.btn-success:active {
+  background-color: #19723e;
+  border-color: #145a31;
+  color: #ffffff;
+}
+
+.btn-danger {
+  background-color: #c8372d;
+  border-color: #ad2d24;
+  color: #ffffff;
+}
+.btn-danger:hover,
+.btn-danger:focus,
+.btn-danger:active {
+  background-color: #ad2d24;
+  border-color: #91241c;
+  color: #ffffff;
+}
+
+.btn-warning {
+  background-color: #d98216;
+  border-color: #bd7011;
+  color: #ffffff;
+}
+.btn-warning:hover,
+.btn-warning:focus,
+.btn-warning:active {
+  background-color: #bd7011;
+  border-color: #9c5b0d;
+  color: #ffffff;
+}
+
+.btn-info {
+  background-color: #0f85a6;
+  border-color: #0c6f8b;
+  color: #ffffff;
+}
+.btn-info:hover,
+.btn-info:focus,
+.btn-info:active {
+  background-color: #0c6f8b;
+  border-color: #095970;
+  color: #ffffff;
+}
+
+/* Uniform Import & Template Download Buttons */
+.btn-import {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #334155 !important;
+  font-weight: 600 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-import i {
+  color: #475569;
+}
+.btn-import:hover,
+.btn-import:focus {
+  background-color: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+.btn-template-dl {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #1e293b !important;
+  font-weight: 600 !important;
+  padding: 7px 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn-template-dl i {
+  color: #1f8a4c;
+}
+.btn-template-dl:hover,
+.btn-template-dl:focus {
+  background-color: #f0fdf4 !important;
+  border-color: #86efac !important;
+  color: #14532d !important;
+}
+
+/* Uniform Quick Filter Pills (Loans / Debts) */
+.quick-filter-bar {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.quick-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  background-image: none !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.quick-filter-btn.qf-pending {
+  background-color: #dc3545;
+  border-color: #dc3545;
+  color: #ffffff;
+}
+.quick-filter-btn.qf-pending:hover {
+  background-color: #c82333;
+}
+.quick-filter-btn.qf-partial {
+  background-color: #e67e22;
+  border-color: #e67e22;
+  color: #ffffff;
+}
+.quick-filter-btn.qf-partial:hover {
+  background-color: #cf6d17;
+}
+.quick-filter-btn.qf-paid {
+  background-color: #7d3c98;
+  border-color: #7d3c98;
+  color: #ffffff;
+}
+.quick-filter-btn.qf-paid:hover {
+  background-color: #693081;
+}
+.quick-filter-btn.qf-outline-warn {
+  background-color: #ffffff;
+  border-color: #e2b06b;
+  color: #9a5b08;
+}
+.quick-filter-btn.qf-outline-warn:hover {
+  background-color: #fffbeb;
+  border-color: #d97706;
+}
+.quick-filter-btn.qf-outline-warn.is-selected {
+  background-color: #fef3c7;
+  border-color: #b45309;
+  color: #78350f;
+}
+.quick-filter-btn.qf-outline-danger {
+  background-color: #ffffff;
+  border-color: #e89b96;
+  color: #991b1b;
+}
+.quick-filter-btn.qf-outline-danger:hover {
+  background-color: #fef2f2;
+  border-color: #dc2626;
+}
+.quick-filter-btn.qf-outline-danger.is-selected {
+  background-color: #fee2e2;
+  border-color: #b91c1c;
+  color: #7f1d1d;
+}
+.quick-filter-btn.is-selected {
+  outline: 2px solid #1e293b;
+  outline-offset: 1px;
+}
+
+/* Dashboard Calendar & Panel Utility Buttons */
+.cal-nav-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.cal-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  min-width: 28px;
+  padding: 0 9px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  background-image: none !important;
+  color: #334155;
+  cursor: pointer;
+}
+.cal-nav-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+.cal-today-btn {
+  height: 26px;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #2563eb;
+  background-color: #2563eb;
+  background-image: none !important;
+  color: #ffffff;
+  cursor: pointer;
+}
+.cal-today-btn:hover {
+  background-color: #1d4ed8;
+  border-color: #1e40af;
+}
+
+.btn-panel-subtle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  background-image: none !important;
+  color: #334155;
+  text-decoration: none !important;
+}
+.btn-panel-subtle:hover,
+.btn-panel-subtle:focus {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
 }
 
 /* Button hover effects */

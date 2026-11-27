@@ -62,31 +62,31 @@
       </div>
 
       <!-- Clickable quick status filters -->
-      <div style="margin-bottom:12px; display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
-        <button type="button" class="btn btn-xs"
-                :style="{ background:'#e74c3c', color:'#fff', border: store.filters.status==='PENDIENTE' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+      <div class="quick-filter-bar">
+        <button type="button" class="quick-filter-btn qf-pending"
+                :class="{ 'is-selected': store.filters.status==='PENDIENTE' }"
                 @click="toggleStatusQuick('PENDIENTE')">
           PENDIENTE
         </button>
-        <button type="button" class="btn btn-xs"
-                :style="{ background:'#f39c12', color:'#fff', border: store.filters.status==='PARCIAL' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+        <button type="button" class="quick-filter-btn qf-partial"
+                :class="{ 'is-selected': store.filters.status==='PARCIAL' }"
                 @click="toggleStatusQuick('PARCIAL')">
           PARCIAL
         </button>
-        <button type="button" class="btn btn-xs"
-                :style="{ background:'#8e44ad', color:'#fff', border: store.filters.status==='PAGADO' ? '2px solid #222' : '2px solid transparent', fontWeight:600 }"
+        <button type="button" class="quick-filter-btn qf-paid"
+                :class="{ 'is-selected': store.filters.status==='PAGADO' }"
                 @click="toggleStatusQuick('PAGADO')">
           PAGADO
         </button>
-        <button type="button" class="btn btn-xs btn-default"
-                :class="{ active: store.filters.status==='UNPAID' }"
+        <button type="button" class="quick-filter-btn qf-outline-warn"
+                :class="{ 'is-selected': store.filters.status==='UNPAID' }"
                 @click="toggleStatusQuick('UNPAID')">
-          <i class="glyphicon glyphicon-hourglass text-warning"></i> Por pagar
+          <i class="glyphicon glyphicon-hourglass"></i> Por pagar
         </button>
-        <button type="button" class="btn btn-xs btn-default"
-                :class="{ active: store.filters.status==='OVERDUE' }"
+        <button type="button" class="quick-filter-btn qf-outline-danger"
+                :class="{ 'is-selected': store.filters.status==='OVERDUE' }"
                 @click="toggleStatusQuick('OVERDUE')">
-          <i class="glyphicon glyphicon-exclamation-sign text-danger"></i> Vencidos
+          <i class="glyphicon glyphicon-exclamation-sign"></i> Vencidos
         </button>
         <button v-if="store.filters.status" type="button" class="btn btn-xs btn-link" style="padding:2px 6px;" @click="store.filters.status = ''">
           Ver todos
@@ -102,10 +102,10 @@
           :row-style-fn="debtRowStyle"
         >
           <template #actions>
-            <button class="btn btn-default btn-sm" @click="importRef.open()">
+            <button type="button" class="btn btn-import" @click="importRef.open()">
               <i class="glyphicon glyphicon-upload"></i> Importar
             </button>
-            <button class="btn btn-danger" @click="openAdd">
+            <button type="button" class="btn btn-danger" @click="openAdd">
               <i class="glyphicon glyphicon-plus-sign"></i> Registrar Préstamo Recibido
             </button>
           </template>
