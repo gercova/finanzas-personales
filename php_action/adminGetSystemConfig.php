@@ -50,28 +50,36 @@ if ($hasSettingsTable) {
 
 $overview = null;
 if ($hasOverviewView) {
-    $resView = $connect->query("SELECT * FROM `v_system_overview` LIMIT 1");
-    if ($resView) {
-        $overview = $resView->fetch_assoc();
-        $resView->free();
+    try {
+        $resView = $connect->query("SELECT * FROM `v_system_overview` LIMIT 1");
+        if ($resView) {
+            $overview = $resView->fetch_assoc();
+            $resView->free();
+        }
+    } catch (\Throwable $e) {
+        $overview = null;
     }
 }
 
 $auditLogs = [];
 if ($hasAuditTable) {
-    $resLogs = $connect->query("
-        SELECT a.audit_id, a.event_type, a.target_key, a.old_value, a.new_value, a.created_at,
-               u.username AS performed_by_username
-        FROM `system_audit_logs` a
-        LEFT JOIN `users` u ON a.performed_by = u.user_id
-        ORDER BY a.audit_id DESC
-        LIMIT 25
-    ");
-    if ($resLogs) {
-        while ($r = $resLogs->fetch_assoc()) {
-            $auditLogs[] = $r;
+    try {
+        $resLogs = $connect->query("
+            SELECT a.audit_id, a.event_type, a.target_key, a.old_value, a.new_value, a.created_at,
+                   u.username AS performed_by_username
+            FROM `system_audit_logs` a
+            LEFT JOIN `users` u ON a.performed_by = u.user_id
+            ORDER BY a.audit_id DESC
+            LIMIT 25
+        ");
+        if ($resLogs) {
+            while ($r = $resLogs->fetch_assoc()) {
+                $auditLogs[] = $r;
+            }
+            $resLogs->free();
         }
-        $resLogs->free();
+    } catch (\Throwable $e) {
+        $auditLogs = [];
     }
 }
 

@@ -199,6 +199,11 @@ export const useDebtStore = defineStore('debt', () => {
     error.value   = null
     try {
       const { data } = await api.fetchDebts()
+      if (data?.success === false) {
+        rows.value  = []
+        error.value = data.messages || 'Error cargando préstamos recibidos.'
+        return
+      }
       rows.value = Array.isArray(data?.data) ? data.data : []
       cacheSet(CACHE_KEY, rows.value)
       page.value = 1

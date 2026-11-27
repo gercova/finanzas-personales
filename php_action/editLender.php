@@ -39,41 +39,45 @@ if (!verifyOwnedEntity($connect, 'lenders', 'lender_id', $id, $userId)) {
     exit;
 }
 
-$chkStmt = $connect->prepare("SELECT lender_id FROM lenders WHERE created_by = ? AND document_number = ? AND lender_id != ? AND is_deleted = 0");
-if ($chkStmt) {
-    $chkStmt->bind_param("isi", $userId, $document_number, $id);
-    $chkStmt->execute();
-    $chkStmt->store_result();
-    if ($chkStmt->num_rows > 0) {
+try {
+    $chkStmt = $connect->prepare("SELECT lender_id FROM lenders WHERE created_by = ? AND document_number = ? AND lender_id != ? AND is_deleted = 0");
+    if ($chkStmt) {
+        $chkStmt->bind_param("isi", $userId, $document_number, $id);
+        $chkStmt->execute();
+        $chkStmt->store_result();
+        if ($chkStmt->num_rows > 0) {
+            $chkStmt->close();
+            echo json_encode(['success' => false, 'messages' => 'Ya existe otro acreedor registrado con este documento.']);
+            exit;
+        }
         $chkStmt->close();
-        echo json_encode(['success' => false, 'messages' => 'Ya existe otro acreedor registrado con este documento.']);
+    }
+
+    $stmt = $connect->prepare("
+        UPDATE lenders
+        SET lender_type = ?, document_type = ?, document_number = ?, full_name = ?, phone = ?, email = ?,
+            address = ?, notes = ?, status = ?
+        WHERE lender_id = ? AND created_by = ? AND is_deleted = 0
+    ");
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'messages' => 'Error preparando actualización: ' . $connect->error]);
         exit;
     }
-    $chkStmt->close();
-}
 
-$stmt = $connect->prepare("
-    UPDATE lenders
-    SET lender_type = ?, document_type = ?, document_number = ?, full_name = ?, phone = ?, email = ?,
-        address = ?, notes = ?, status = ?
-    WHERE lender_id = ? AND created_by = ? AND is_deleted = 0
-");
-if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error preparando actualización: ' . $connect->error]);
-    exit;
-}
+    $stmt->bind_param("ssssssssiii", $lender_type, $document_type, $document_number, $full_name, $phone, $email, $address, $notes, $status, $id, $userId);
 
-$stmt->bind_param("ssssssssiii", $lender_type, $document_type, $document_number, $full_name, $phone, $email, $address, $notes, $status, $id, $userId);
-
-if ($stmt->execute()) {
-    $upDebt = $connect->prepare("UPDATE debts SET lender_name = ?, lender_type = ? WHERE lender_id = ? AND created_by = ?");
-    if ($upDebt) {
-        $upDebt->bind_param("ssii", $full_name, $lender_type, $id, $userId);
-        $upDebt->execute();
-        $upDebt->close();
+    if ($stmt->execute()) {
+        $upDebt = $connect->prepare("UPDATE debts SET lender_name = ?, lender_type = ? WHERE lender_id = ? AND created_by = ?");
+        if ($upDebt) {
+            $upDebt->bind_param("ssii", $full_name, $lender_type, $id, $userId);
+            $upDebt->execute();
+            $upDebt->close();
+        }
+        echo json_encode(['success' => true, 'messages' => 'Acreedor / entidad actualizado exitosamente.'], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode(['success' => false, 'messages' => 'Error al actualizar: ' . $connect->error]);
     }
-    echo json_encode(['success' => true, 'messages' => 'Acreedor / entidad actualizado exitosamente.'], JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode(['success' => false, 'messages' => 'Error al actualizar: ' . $connect->error]);
+    $stmt->close();
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'messages' => 'Error de base de datos: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-$stmt->close();

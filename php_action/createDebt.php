@@ -59,6 +59,11 @@ if (!verifyOwnedEntity($connect, 'accounts', 'account_id', $account_id, $userId)
     exit;
 }
 
+if (!tableExists($connect, 'debts')) {
+    echo json_encode(['success' => false, 'messages' => 'La tabla debts aún no existe. Ejecute la migración 004 desde Configuración General del Sistema.'], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
     $total_payable = $principal_amount + ($principal_amount * $interest_value / 100);
 } elseif ($interest_type === 'FIXED' && $interest_value > 0) {
@@ -70,26 +75,30 @@ if ($interest_type === 'PERCENTAGE' && $interest_value > 0) {
 
 $balance_pending = $total_payable;
 
-$stmt = $connect->prepare(
-    "INSERT INTO debts (lender_id, lender_name, lender_type, concept, account_id, debt_date, due_date, principal_amount, interest_type, interest_value, total_payable, amount_paid, balance_pending, status, notes, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'PENDIENTE', ?, ?)"
-);
-if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error preparando consulta: ' . $connect->error]);
-    exit;
-}
+try {
+    $stmt = $connect->prepare(
+        "INSERT INTO debts (lender_id, lender_name, lender_type, concept, account_id, debt_date, due_date, principal_amount, interest_type, interest_value, total_payable, amount_paid, balance_pending, status, notes, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'PENDIENTE', ?, ?)"
+    );
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'messages' => 'Error preparando consulta: ' . $connect->error]);
+        exit;
+    }
 
-$stmt->bind_param(
-    "isssissdsdddsi",
-    $lender_id, $lender_name, $lender_type, $concept, $account_id, $debt_date, $due_date,
-    $principal_amount, $interest_type, $interest_value,
-    $total_payable, $balance_pending, $notes, $userId
-);
+    $stmt->bind_param(
+        "isssissdsdddsi",
+        $lender_id, $lender_name, $lender_type, $concept, $account_id, $debt_date, $due_date,
+        $principal_amount, $interest_type, $interest_value,
+        $total_payable, $balance_pending, $notes, $userId
+    );
 
-// Account balance credit is handled automatically by trg_debts_after_insert
-if ($stmt->execute()) {
-    echo json_encode(['success' => true, 'messages' => 'Préstamo recibido registrado exitosamente.'], JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode(['success' => false, 'messages' => 'Error al guardar: ' . $connect->error]);
+    // Account balance credit is handled automatically by trg_debts_after_insert
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'messages' => 'Préstamo recibido registrado exitosamente.'], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode(['success' => false, 'messages' => 'Error al guardar: ' . $connect->error]);
+    }
+    $stmt->close();
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'messages' => 'Error de base de datos: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-$stmt->close();

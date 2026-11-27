@@ -40,8 +40,16 @@ class MigrationRunner {
             UNIQUE KEY `uq_schema_migration_key` (`migration_key`)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
         $this->db->query($sql);
-        @$this->db->query("ALTER TABLE `schema_migrations` MODIFY COLUMN `status` ENUM('APPLIED','FAILED','PENDING') NOT NULL DEFAULT 'APPLIED'");
-        @$this->db->query("ALTER TABLE `schema_migrations` ADD COLUMN IF NOT EXISTS `sql_content` LONGTEXT DEFAULT NULL AFTER `changes_applied`");
+        try {
+            $colRes = $this->db->query("SHOW COLUMNS FROM `schema_migrations` LIKE 'sql_content'");
+            if ($colRes && $colRes->num_rows === 0) {
+                $this->db->query("ALTER TABLE `schema_migrations` ADD COLUMN `sql_content` LONGTEXT DEFAULT NULL AFTER `changes_applied`");
+            }
+            if ($colRes) $colRes->free();
+            $this->db->query("ALTER TABLE `schema_migrations` MODIFY COLUMN `status` ENUM('APPLIED','FAILED','PENDING') NOT NULL DEFAULT 'APPLIED'");
+        } catch (\Throwable $e) {
+            // Keep tracking table usable even if ALTER privilege is restricted
+        }
     }
 
     /**
@@ -216,22 +224,30 @@ class MigrationRunner {
                 $cats[] = $desc['object_type'];
             }
 
-            $ok = $this->db->query($stmtSql);
-            // Drain any extra result sets if a CALL statement was executed
-            while ($this->db->more_results() && $this->db->next_result()) {
-                $extra = $this->db->store_result();
-                if ($extra instanceof mysqli_result) $extra->free();
+            $ok = false;
+            $execErr = '';
+            try {
+                $ok = (bool)$this->db->query($stmtSql);
+                // Drain any extra result sets if a CALL statement was executed
+                while ($this->db->more_results() && $this->db->next_result()) {
+                    $extra = $this->db->store_result();
+                    if ($extra instanceof mysqli_result) $extra->free();
+                }
+            } catch (\Throwable $ex) {
+                $ok = false;
+                $execErr = $ex->getMessage();
             }
 
             if (!$ok) {
-                $errMsg = "Error en sentencia ({$desc['summary']}): " . $this->db->error;
+                $dbErr = $execErr !== '' ? $execErr : $this->db->error;
+                $errMsg = "Error en sentencia ({$desc['summary']}): " . $dbErr;
                 $changes[] = [
                     'action'      => $desc['action'],
                     'object_type' => $desc['object_type'],
                     'object_name' => $desc['object_name'],
                     'summary'     => $desc['summary'],
                     'status'      => 'FAILED',
-                    'error'       => $this->db->error,
+                    'error'       => $dbErr,
                 ];
                 break;
             }
@@ -427,66 +443,72 @@ class MigrationRunner {
         $procedures = [];
         $triggers   = [];
 
-        $resT = $this->db->query("
-            SELECT TABLE_NAME, TABLE_TYPE, ENGINE, TABLE_ROWS, CREATE_TIME, UPDATE_TIME
-            FROM information_schema.TABLES
-            WHERE TABLE_SCHEMA = DATABASE()
-            ORDER BY TABLE_TYPE ASC, TABLE_NAME ASC
-        ");
-        if ($resT) {
-            while ($r = $resT->fetch_assoc()) {
-                $item = [
-                    'name'        => $r['TABLE_NAME'],
-                    'type'        => $r['TABLE_TYPE'],
-                    'engine'      => $r['ENGINE'] ?: '—',
-                    'rows'        => (int)($r['TABLE_ROWS'] ?? 0),
-                    'created_at'  => $r['CREATE_TIME'] ?: '—',
-                    'updated_at'  => $r['UPDATE_TIME'] ?: '—',
-                ];
-                if ($r['TABLE_TYPE'] === 'VIEW') {
-                    $views[] = $item;
-                } else {
-                    $tables[] = $item;
+        try {
+            $resT = $this->db->query("
+                SELECT TABLE_NAME, TABLE_TYPE, ENGINE, TABLE_ROWS, CREATE_TIME, UPDATE_TIME
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                ORDER BY TABLE_TYPE ASC, TABLE_NAME ASC
+            ");
+            if ($resT) {
+                while ($r = $resT->fetch_assoc()) {
+                    $item = [
+                        'name'        => $r['TABLE_NAME'],
+                        'type'        => $r['TABLE_TYPE'],
+                        'engine'      => $r['ENGINE'] ?: '—',
+                        'rows'        => (int)($r['TABLE_ROWS'] ?? 0),
+                        'created_at'  => $r['CREATE_TIME'] ?: '—',
+                        'updated_at'  => $r['UPDATE_TIME'] ?: '—',
+                    ];
+                    if ($r['TABLE_TYPE'] === 'VIEW') {
+                        $views[] = $item;
+                    } else {
+                        $tables[] = $item;
+                    }
                 }
+                $resT->free();
             }
-            $resT->free();
-        }
+        } catch (\Throwable $e) {}
 
-        $resP = $this->db->query("
-            SELECT ROUTINE_NAME, ROUTINE_TYPE, CREATED, LAST_ALTERED
-            FROM information_schema.ROUTINES
-            WHERE ROUTINE_SCHEMA = DATABASE()
-            ORDER BY ROUTINE_NAME ASC
-        ");
-        if ($resP) {
-            while ($r = $resP->fetch_assoc()) {
-                $procedures[] = [
-                    'name'       => $r['ROUTINE_NAME'],
-                    'type'       => $r['ROUTINE_TYPE'],
-                    'created_at' => $r['CREATED'] ?: '—',
-                    'updated_at' => $r['LAST_ALTERED'] ?: '—',
-                ];
+        try {
+            $resP = $this->db->query("
+                SELECT ROUTINE_NAME, ROUTINE_TYPE, CREATED, LAST_ALTERED
+                FROM information_schema.ROUTINES
+                WHERE ROUTINE_SCHEMA = DATABASE()
+                ORDER BY ROUTINE_NAME ASC
+            ");
+            if ($resP) {
+                while ($r = $resP->fetch_assoc()) {
+                    $procedures[] = [
+                        'name'       => $r['ROUTINE_NAME'],
+                        'type'       => $r['ROUTINE_TYPE'],
+                        'created_at' => $r['CREATED'] ?: '—',
+                        'updated_at' => $r['LAST_ALTERED'] ?: '—',
+                    ];
+                }
+                $resP->free();
             }
-            $resP->free();
-        }
+        } catch (\Throwable $e) {}
 
-        $resTr = $this->db->query("
-            SELECT TRIGGER_NAME, EVENT_OBJECT_TABLE, ACTION_TIMING, EVENT_MANIPULATION, CREATED
-            FROM information_schema.TRIGGERS
-            WHERE TRIGGER_SCHEMA = DATABASE()
-            ORDER BY EVENT_OBJECT_TABLE ASC, TRIGGER_NAME ASC
-        ");
-        if ($resTr) {
-            while ($r = $resTr->fetch_assoc()) {
-                $triggers[] = [
-                    'name'       => $r['TRIGGER_NAME'],
-                    'table'      => $r['EVENT_OBJECT_TABLE'],
-                    'timing'     => $r['ACTION_TIMING'] . ' ' . $r['EVENT_MANIPULATION'],
-                    'created_at' => $r['CREATED'] ?: '—',
-                ];
+        try {
+            $resTr = $this->db->query("
+                SELECT TRIGGER_NAME, EVENT_OBJECT_TABLE, ACTION_TIMING, EVENT_MANIPULATION, CREATED
+                FROM information_schema.TRIGGERS
+                WHERE TRIGGER_SCHEMA = DATABASE()
+                ORDER BY EVENT_OBJECT_TABLE ASC, TRIGGER_NAME ASC
+            ");
+            if ($resTr) {
+                while ($r = $resTr->fetch_assoc()) {
+                    $triggers[] = [
+                        'name'       => $r['TRIGGER_NAME'],
+                        'table'      => $r['EVENT_OBJECT_TABLE'],
+                        'timing'     => $r['ACTION_TIMING'] . ' ' . $r['EVENT_MANIPULATION'],
+                        'created_at' => $r['CREATED'] ?: '—',
+                    ];
+                }
+                $resTr->free();
             }
-            $resTr->free();
-        }
+        } catch (\Throwable $e) {}
 
         return [
             'tables'     => $tables,

@@ -10,20 +10,30 @@ if ($id <= 0) {
     exit;
 }
 
-$stmt = $connect->prepare("
-    SELECT lender_id AS id, lender_type, document_type, document_number, full_name,
-           phone, email, address, notes, status
-    FROM lenders
-    WHERE lender_id = ? AND created_by = ? AND is_deleted = 0
-");
-if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error de consulta.']);
+if (!tableExists($connect, 'lenders')) {
+    echo json_encode(['success' => false, 'messages' => 'La tabla lenders aún no existe. Ejecute la migración 004 en Configuración General del Sistema.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
-$stmt->bind_param("ii", $id, $userId);
-$stmt->execute();
-$data = $stmt->get_result()->fetch_assoc();
-$stmt->close();
+
+try {
+    $stmt = $connect->prepare("
+        SELECT lender_id AS id, lender_type, document_type, document_number, full_name,
+               phone, email, address, notes, status
+        FROM lenders
+        WHERE lender_id = ? AND created_by = ? AND is_deleted = 0
+    ");
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'messages' => 'Error de consulta.']);
+        exit;
+    }
+    $stmt->bind_param("ii", $id, $userId);
+    $stmt->execute();
+    $data = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'messages' => 'Error de base de datos: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 if ($data) {
     echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);

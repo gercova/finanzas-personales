@@ -33,40 +33,49 @@ if (empty($document_number) || empty($full_name)) {
     exit;
 }
 
-$chkStmt = $connect->prepare("SELECT lender_id FROM lenders WHERE created_by = ? AND document_number = ? AND is_deleted = 0");
-if ($chkStmt) {
-    $chkStmt->bind_param("is", $userId, $document_number);
-    $chkStmt->execute();
-    $chkStmt->store_result();
-    if ($chkStmt->num_rows > 0) {
-        $chkStmt->close();
-        echo json_encode(['success' => false, 'messages' => 'Ya existe un acreedor / entidad registrado con este documento.']);
-        exit;
-    }
-    $chkStmt->close();
-}
-
-$stmt = $connect->prepare("
-    INSERT INTO lenders (lender_type, document_type, document_number, full_name, phone, email, address, notes, status, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-");
-if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error preparando inserción: ' . $connect->error]);
+if (!tableExists($connect, 'lenders')) {
+    echo json_encode(['success' => false, 'messages' => 'La tabla lenders aún no existe. Ejecute la migración 004 desde Configuración General del Sistema.'], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$stmt->bind_param("ssssssssii", $lender_type, $document_type, $document_number, $full_name, $phone, $email, $address, $notes, $status, $userId);
+try {
+    $chkStmt = $connect->prepare("SELECT lender_id FROM lenders WHERE created_by = ? AND document_number = ? AND is_deleted = 0");
+    if ($chkStmt) {
+        $chkStmt->bind_param("is", $userId, $document_number);
+        $chkStmt->execute();
+        $chkStmt->store_result();
+        if ($chkStmt->num_rows > 0) {
+            $chkStmt->close();
+            echo json_encode(['success' => false, 'messages' => 'Ya existe un acreedor / entidad registrado con este documento.']);
+            exit;
+        }
+        $chkStmt->close();
+    }
 
-if ($stmt->execute()) {
-    $newId = $stmt->insert_id;
-    echo json_encode([
-        'success'     => true,
-        'messages'    => 'Acreedor / entidad registrado exitosamente.',
-        'lender_id'   => $newId,
-        'lender_type' => $lender_type,
-        'full_name'   => $full_name,
-    ], JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode(['success' => false, 'messages' => 'Error al guardar: ' . $connect->error]);
+    $stmt = $connect->prepare("
+        INSERT INTO lenders (lender_type, document_type, document_number, full_name, phone, email, address, notes, status, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ");
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'messages' => 'Error preparando inserción: ' . $connect->error]);
+        exit;
+    }
+
+    $stmt->bind_param("ssssssssii", $lender_type, $document_type, $document_number, $full_name, $phone, $email, $address, $notes, $status, $userId);
+
+    if ($stmt->execute()) {
+        $newId = $stmt->insert_id;
+        echo json_encode([
+            'success'     => true,
+            'messages'    => 'Acreedor / entidad registrado exitosamente.',
+            'lender_id'   => $newId,
+            'lender_type' => $lender_type,
+            'full_name'   => $full_name,
+        ], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode(['success' => false, 'messages' => 'Error al guardar: ' . $connect->error]);
+    }
+    $stmt->close();
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'messages' => 'Error de base de datos: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-$stmt->close();

@@ -40,27 +40,49 @@ if ($connect->connect_error) {
 function callProcedureMulti(mysqli $connect, string $sql, string $types = '', array $params = []): array
 {
     $resultSets = [];
-    $stmt = $connect->prepare($sql);
-    if (!$stmt) {
-        return $resultSets;
-    }
+    try {
+        $stmt = $connect->prepare($sql);
+        if (!$stmt) {
+            return $resultSets;
+        }
 
-    if ($types !== '' && !empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
+        if ($types !== '' && !empty($params)) {
+            $stmt->bind_param($types, ...$params);
+        }
 
-    if ($stmt->execute()) {
-        do {
-            $res = $stmt->get_result();
-            if ($res instanceof mysqli_result) {
-                $resultSets[] = $res->fetch_all(MYSQLI_ASSOC);
-                $res->free();
-            }
-        } while ($stmt->more_results() && $stmt->next_result());
-    }
+        if ($stmt->execute()) {
+            do {
+                $res = $stmt->get_result();
+                if ($res instanceof mysqli_result) {
+                    $resultSets[] = $res->fetch_all(MYSQLI_ASSOC);
+                    $res->free();
+                }
+            } while ($stmt->more_results() && $stmt->next_result());
+        }
 
-    $stmt->close();
+        $stmt->close();
+    } catch (\Throwable $e) {
+        return [];
+    }
     return $resultSets;
+}
+
+/**
+ * Safely check if a base table exists in the currently selected database.
+ */
+function tableExists(mysqli $connect, string $table): bool
+{
+    if (!preg_match('/^[a-zA-Z0-9_]+$/', $table)) {
+        return false;
+    }
+    try {
+        $res = $connect->query("SHOW TABLES LIKE '{$table}'");
+        $exists = ($res && $res->num_rows > 0);
+        if ($res) $res->free();
+        return $exists;
+    } catch (\Throwable $e) {
+        return false;
+    }
 }
 
 /**
@@ -91,18 +113,22 @@ function verifyOwnedEntity(mysqli $connect, string $table, string $pkColumn, int
         return false;
     }
 
-    $sql  = "SELECT 1 FROM `{$table}` WHERE `{$pkColumn}` = ? AND `created_by` = ? AND `is_deleted` = 0 LIMIT 1";
-    $stmt = $connect->prepare($sql);
-    if (!$stmt) {
+    try {
+        $sql  = "SELECT 1 FROM `{$table}` WHERE `{$pkColumn}` = ? AND `created_by` = ? AND `is_deleted` = 0 LIMIT 1";
+        $stmt = $connect->prepare($sql);
+        if (!$stmt) {
+            return false;
+        }
+        $stmt->bind_param("ii", $id, $userId);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $ok  = ($res && $res->num_rows === 1);
+        $stmt->close();
+
+        return $ok;
+    } catch (\Throwable $e) {
         return false;
     }
-    $stmt->bind_param("ii", $id, $userId);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $ok  = ($res && $res->num_rows === 1);
-    $stmt->close();
-
-    return $ok;
 }
 
 /**

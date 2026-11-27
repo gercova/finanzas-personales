@@ -80,6 +80,11 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
       error.value   = null
       try {
         const { data } = await fetcher()
+        if (data?.success === false) {
+          rows.value  = []
+          error.value = data.messages || 'Error cargando datos.'
+          return
+        }
         rows.value = Array.isArray(data?.data) ? data.data : []
         cacheSet(cacheKey, rows.value)
         page.value = 1

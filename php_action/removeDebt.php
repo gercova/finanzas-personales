@@ -23,15 +23,19 @@ if (!verifyOwnedEntity($connect, 'debts', 'debt_id', $debt_id, $userId)) {
 }
 
 // Account balance reversal is handled automatically by trg_debts_after_update
-$stmt = $connect->prepare("UPDATE debts SET is_deleted=1, deleted_at=NOW() WHERE debt_id=? AND created_by=?");
-if (!$stmt) {
-    echo json_encode(['success' => false, 'messages' => 'Error interno.']);
-    exit;
+try {
+    $stmt = $connect->prepare("UPDATE debts SET is_deleted=1, deleted_at=NOW() WHERE debt_id=? AND created_by=?");
+    if (!$stmt) {
+        echo json_encode(['success' => false, 'messages' => 'Error interno.']);
+        exit;
+    }
+    $stmt->bind_param("ii", $debt_id, $userId);
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'messages' => 'Préstamo recibido eliminado.'], JSON_UNESCAPED_UNICODE);
+    } else {
+        echo json_encode(['success' => false, 'messages' => 'Error al eliminar.']);
+    }
+    $stmt->close();
+} catch (\Throwable $e) {
+    echo json_encode(['success' => false, 'messages' => 'Error de base de datos: ' . $e->getMessage()], JSON_UNESCAPED_UNICODE);
 }
-$stmt->bind_param("ii", $debt_id, $userId);
-if ($stmt->execute()) {
-    echo json_encode(['success' => true, 'messages' => 'Préstamo recibido eliminado.'], JSON_UNESCAPED_UNICODE);
-} else {
-    echo json_encode(['success' => false, 'messages' => 'Error al eliminar.']);
-}
-$stmt->close();

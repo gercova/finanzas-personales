@@ -4,21 +4,40 @@ header('Content-Type: application/json; charset=utf-8');
 
 $userId = (int)$_SESSION['userId'];
 
-$stmt = $connect->prepare("
-    SELECT lender_id AS id, lender_type, document_type, document_number, full_name,
-           phone, email, address, notes, status, created_at
-    FROM lenders
-    WHERE created_by = ? AND is_deleted = 0
-    ORDER BY full_name ASC
-");
-if (!$stmt) {
-    echo json_encode(['success' => true, 'data' => []]);
+if (!tableExists($connect, 'lenders')) {
+    echo json_encode([
+        'success'         => false,
+        'needs_migration' => true,
+        'data'            => [],
+        'messages'        => 'La tabla de Acreedores (lenders) aún no existe. Ejecute la migración 004 desde Configuración General del Sistema (Admin).'
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
+try {
+    $stmt = $connect->prepare("
+        SELECT lender_id AS id, lender_type, document_type, document_number, full_name,
+               phone, email, address, notes, status, created_at
+        FROM lenders
+        WHERE created_by = ? AND is_deleted = 0
+        ORDER BY full_name ASC
+    ");
+    if (!$stmt) {
+        echo json_encode(['success' => true, 'data' => []]);
+        exit;
+    }
+
+    $stmt->bind_param("i", $userId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} catch (\Throwable $e) {
+    echo json_encode([
+        'success'  => false,
+        'data'     => [],
+        'messages' => 'Error consultando acreedores: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 $data = [];
 while ($row = $result->fetch_assoc()) {
