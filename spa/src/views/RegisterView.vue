@@ -1,137 +1,139 @@
 <template>
-  <div class="container">
-    <div class="row vertical">
-      <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3 col-lg-5 col-lg-offset-3">
-        <div class="panel panel-success">
-          <div class="panel-heading">
-            <h3 class="panel-title">
-              <i class="glyphicon glyphicon-user"></i>
-              Crear Cuenta en {{ authStore.appName }}
-            </h3>
+  <AuthLayout :app-name="authStore.appName">
+    <h2 class="auth-heading">Crear cuenta</h2>
+    <p class="auth-subheading">
+      Configura tu espacio personal en menos de un minuto con cuentas y categorías listas para usar.
+    </p>
+
+    <div v-if="errorMsg" class="auth-alert auth-alert-warning" role="alert">
+      {{ errorMsg }}
+    </div>
+
+    <form class="auth-form" @submit.prevent="submitRegister">
+      <div class="form-group">
+        <label for="reg-fullname">Nombre completo</label>
+        <input
+          id="reg-fullname"
+          type="text"
+          class="form-control"
+          v-model="form.full_name"
+          placeholder="Ej: María Pérez"
+          required
+          autofocus
+        />
+      </div>
+
+      <div class="row">
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label for="reg-username">Usuario</label>
+            <input
+              id="reg-username"
+              type="text"
+              class="form-control"
+              v-model="form.username"
+              placeholder="usuario_123"
+              autocomplete="username"
+              required
+            />
           </div>
-          <div class="panel-body">
-            <div v-if="errorMsg" class="alert alert-warning" role="alert">
-              <i class="glyphicon glyphicon-exclamation-sign"></i> {{ errorMsg }}
-            </div>
-
-            <form class="form-horizontal" @submit.prevent="submitRegister">
-              <div class="form-group">
-                <label for="reg-fullname" class="col-sm-4 control-label">Nombre completo</label>
-                <div class="col-sm-8">
-                  <input
-                    id="reg-fullname"
-                    type="text"
-                    class="form-control"
-                    v-model="form.full_name"
-                    placeholder="Ej: María Pérez"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="reg-username" class="col-sm-4 control-label">Usuario</label>
-                <div class="col-sm-8">
-                  <input
-                    id="reg-username"
-                    type="text"
-                    class="form-control"
-                    v-model="form.username"
-                    placeholder="usuario_123"
-                    autocomplete="username"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="reg-email" class="col-sm-4 control-label">Correo (opcional)</label>
-                <div class="col-sm-8">
-                  <input
-                    id="reg-email"
-                    type="email"
-                    class="form-control"
-                    v-model="form.email"
-                    placeholder="correo@ejemplo.com"
-                    autocomplete="email"
-                  />
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="reg-password" class="col-sm-4 control-label">Contraseña</label>
-                <div class="col-sm-8">
-                  <div class="input-group">
-                    <input
-                      id="reg-password"
-                      :type="showPass ? 'text' : 'password'"
-                      class="form-control"
-                      v-model="form.password"
-                      placeholder="Mínimo 6 caracteres"
-                      autocomplete="new-password"
-                      minlength="6"
-                      required
-                    />
-                    <span class="input-group-btn">
-                      <button type="button" class="btn btn-default" @click="showPass = !showPass">
-                        <i :class="showPass ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
-                      </button>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="reg-confirm" class="col-sm-4 control-label">Confirmar</label>
-                <div class="col-sm-8">
-                  <div class="input-group">
-                    <input
-                      id="reg-confirm"
-                      :type="showConfirm ? 'text' : 'password'"
-                      class="form-control"
-                      v-model="form.confirm_password"
-                      placeholder="Repita la contraseña"
-                      autocomplete="new-password"
-                      minlength="6"
-                      required
-                    />
-                    <span class="input-group-btn">
-                      <button type="button" class="btn btn-default" @click="showConfirm = !showConfirm">
-                        <i :class="showConfirm ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
-                      </button>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <div class="col-sm-offset-4 col-sm-8">
-                  <button type="submit" class="btn btn-success btn-block" :disabled="submitting">
-                    <i class="glyphicon glyphicon-ok-sign"></i>
-                    {{ submitting ? ' Creando cuenta…' : ' Crear mi cuenta' }}
-                  </button>
-                </div>
-              </div>
-            </form>
-
-            <hr style="margin:15px 0;" />
-            <div class="text-center">
-              <span class="text-muted">¿Ya tienes una cuenta?</span>
-              <router-link to="/login" class="btn btn-link" style="padding:0 4px;font-weight:600;">
-                Iniciar sesión
-              </router-link>
-            </div>
+        </div>
+        <div class="col-sm-6">
+          <div class="form-group">
+            <label for="reg-email">Correo (opcional)</label>
+            <input
+              id="reg-email"
+              type="email"
+              class="form-control"
+              v-model="form.email"
+              placeholder="correo@ejemplo.com"
+              autocomplete="email"
+            />
           </div>
         </div>
       </div>
-    </div>
-  </div>
+
+      <div class="form-group">
+        <label for="reg-password">Contraseña</label>
+        <div class="input-group">
+          <input
+            id="reg-password"
+            :type="showPass ? 'text' : 'password'"
+            class="form-control"
+            v-model="form.password"
+            placeholder="Mínimo 6 caracteres"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+          <span class="input-group-btn">
+            <button
+              type="button"
+              class="btn btn-default"
+              @click="showPass = !showPass"
+              :title="showPass ? 'Ocultar contraseña' : 'Ver contraseña'"
+              :aria-label="showPass ? 'Ocultar contraseña' : 'Ver contraseña'"
+            >
+              <i :class="showPass ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+            </button>
+          </span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-confirm">Confirmar contraseña</label>
+        <div class="input-group">
+          <input
+            id="reg-confirm"
+            :type="showConfirm ? 'text' : 'password'"
+            class="form-control"
+            v-model="form.confirm_password"
+            placeholder="Repite la contraseña"
+            autocomplete="new-password"
+            minlength="6"
+            required
+          />
+          <span class="input-group-btn">
+            <button
+              type="button"
+              class="btn btn-default"
+              @click="showConfirm = !showConfirm"
+              :title="showConfirm ? 'Ocultar contraseña' : 'Ver contraseña'"
+              :aria-label="showConfirm ? 'Ocultar contraseña' : 'Ver contraseña'"
+            >
+              <i :class="showConfirm ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+            </button>
+          </span>
+        </div>
+        <small
+          v-if="form.confirm_password"
+          :class="passwordsMatch ? 'text-success' : 'text-danger'"
+          style="display:block; margin-top:4px; font-size:12px;"
+        >
+          {{ passwordsMatch ? 'Las contraseñas coinciden.' : 'Las contraseñas no coinciden.' }}
+        </small>
+      </div>
+
+      <div style="margin-top:20px;">
+        <button type="submit" class="auth-btn-primary" :disabled="submitting">
+          {{ submitting ? 'Creando cuenta…' : 'Crear mi cuenta' }}
+        </button>
+      </div>
+
+      <hr class="auth-divider" />
+      <div class="auth-switch">
+        <span>¿Ya tienes una cuenta?</span>
+        <router-link to="/login">Iniciar sesión</router-link>
+      </div>
+    </form>
+  </AuthLayout>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
+import AuthLayout from '@/components/AuthLayout.vue'
 
 const router    = useRouter()
 const authStore = useAuthStore()
@@ -148,6 +150,10 @@ const showPass    = ref(false)
 const showConfirm = ref(false)
 const submitting  = ref(false)
 const errorMsg    = ref('')
+
+const passwordsMatch = computed(() =>
+  Boolean(form.confirm_password) && form.password === form.confirm_password
+)
 
 async function submitRegister() {
   errorMsg.value = ''

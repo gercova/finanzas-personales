@@ -1,93 +1,74 @@
 <template>
-  <div class="container">
-    <div class="row vertical">
-      <div class="col-xs-12 col-sm-8 col-sm-offset-2 col-md-6 col-md-offset-3 col-lg-4 col-lg-offset-4">
-        <div class="panel panel-info">
-          <div class="panel-heading">
-            <h3 class="panel-title">
-              <i class="glyphicon glyphicon-piggy-bank"></i>
-              {{ authStore.appName }} - Inicio de sesión
-            </h3>
-          </div>
-          <div class="panel-body">
-            <div v-if="successMsg" class="alert alert-success" role="alert">
-              <i class="glyphicon glyphicon-ok-sign"></i> {{ successMsg }}
-            </div>
+  <AuthLayout :app-name="authStore.appName">
+    <h2 class="auth-heading">Iniciar sesión</h2>
+    <p class="auth-subheading">
+      Ingresa tus credenciales para acceder a tu panel financiero.
+    </p>
 
-            <div v-if="errorMsg" class="alert alert-warning" role="alert">
-              <i class="glyphicon glyphicon-exclamation-sign"></i> {{ errorMsg }}
-            </div>
+    <div v-if="successMsg" class="auth-alert auth-alert-success" role="alert">
+      {{ successMsg }}
+    </div>
 
-            <form class="form-horizontal" @submit.prevent="submitLogin">
-              <fieldset>
-                <div class="form-group">
-                  <label for="login-username" class="col-sm-3 control-label">Usuario</label>
-                  <div class="col-sm-9">
-                    <input
-                      id="login-username"
-                      type="text"
-                      class="form-control"
-                      v-model="form.username"
-                      placeholder="Nombre de usuario"
-                      autocomplete="username"
-                      required
-                      autofocus
-                    />
-                  </div>
-                </div>
+    <div v-if="errorMsg" class="auth-alert auth-alert-warning" role="alert">
+      {{ errorMsg }}
+    </div>
 
-                <div class="form-group">
-                  <label for="login-password" class="col-sm-3 control-label">Contraseña</label>
-                  <div class="col-sm-9">
-                    <div class="input-group">
-                      <input
-                        id="login-password"
-                        :type="showPassword ? 'text' : 'password'"
-                        class="form-control"
-                        v-model="form.password"
-                        placeholder="Contraseña"
-                        autocomplete="current-password"
-                        required
-                      />
-                      <span class="input-group-btn">
-                        <button
-                          type="button"
-                          class="btn btn-default"
-                          @click="showPassword = !showPassword"
-                          :title="showPassword ? 'Ocultar contraseña' : 'Ver contraseña'"
-                        >
-                          <i :class="showPassword ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
-                        </button>
-                      </span>
-                    </div>
-                  </div>
-                </div>
+    <form class="auth-form" @submit.prevent="submitLogin">
+      <div class="form-group">
+        <label for="login-username">Usuario</label>
+        <input
+          id="login-username"
+          type="text"
+          class="form-control"
+          v-model="form.username"
+          placeholder="Ingresa tu usuario"
+          autocomplete="username"
+          required
+          autofocus
+        />
+      </div>
 
-                <div class="form-group">
-                  <div class="col-sm-offset-3 col-sm-9">
-                    <button type="submit" class="btn btn-default" :disabled="submitting">
-                      <i class="glyphicon glyphicon-log-in"></i>
-                      {{ submitting ? ' Ingresando…' : ' Ingresar' }}
-                    </button>
-                  </div>
-                </div>
-
-                <template v-if="authStore.allowRegistration">
-                  <hr style="margin:15px 0;" />
-                  <div class="text-center">
-                    <span class="text-muted">¿No tienes una cuenta?</span>
-                    <router-link to="/register" class="btn btn-link" style="padding:0 4px;font-weight:600;">
-                      Regístrate aquí
-                    </router-link>
-                  </div>
-                </template>
-              </fieldset>
-            </form>
-          </div>
+      <div class="form-group">
+        <label for="login-password">Contraseña</label>
+        <div class="input-group">
+          <input
+            id="login-password"
+            :type="showPassword ? 'text' : 'password'"
+            class="form-control"
+            v-model="form.password"
+            placeholder="Ingresa tu contraseña"
+            autocomplete="current-password"
+            required
+          />
+          <span class="input-group-btn">
+            <button
+              type="button"
+              class="btn btn-default"
+              @click="showPassword = !showPassword"
+              :title="showPassword ? 'Ocultar contraseña' : 'Ver contraseña'"
+              :aria-label="showPassword ? 'Ocultar contraseña' : 'Ver contraseña'"
+            >
+              <i :class="showPassword ? 'glyphicon glyphicon-eye-close' : 'glyphicon glyphicon-eye-open'"></i>
+            </button>
+          </span>
         </div>
       </div>
-    </div>
-  </div>
+
+      <div style="margin-top:20px;">
+        <button type="submit" class="auth-btn-primary" :disabled="submitting">
+          {{ submitting ? 'Ingresando…' : 'Ingresar a mi cuenta' }}
+        </button>
+      </div>
+
+      <template v-if="authStore.allowRegistration">
+        <hr class="auth-divider" />
+        <div class="auth-switch">
+          <span>¿Aún no tienes una cuenta?</span>
+          <router-link to="/register">Crear cuenta</router-link>
+        </div>
+      </template>
+    </form>
+  </AuthLayout>
 </template>
 
 <script setup>
@@ -95,6 +76,7 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
+import AuthLayout from '@/components/AuthLayout.vue'
 
 const route        = useRoute()
 const router       = useRouter()
@@ -112,15 +94,15 @@ const localError   = ref('')
 
 const successMsg = computed(() =>
   route.query.registered === '1'
-    ? 'Cuenta creada exitosamente. Ya puede iniciar sesión con su usuario y contraseña (sus cuentas y categorías iniciales se generaron automáticamente).'
+    ? 'Cuenta creada exitosamente. Ya puedes iniciar sesión; tus cuentas y categorías iniciales fueron generadas automáticamente.'
     : ''
 )
 
 const errorMsg = computed(() => {
   if (localError.value) return localError.value
   const err = route.query.error || authStore.sessionReason
-  if (err === 'timeout') return 'Su sesión ha expirado por inactividad. Por favor ingrese nuevamente.'
-  if (err === 'hijack')  return 'Su sesión se cerró por motivos de seguridad.'
+  if (err === 'timeout') return 'Tu sesión expiró por inactividad. Ingresa nuevamente.'
+  if (err === 'hijack')  return 'Tu sesión se cerró por motivos de seguridad.'
   return ''
 })
 
