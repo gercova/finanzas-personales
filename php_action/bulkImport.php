@@ -3,7 +3,7 @@
  * bulkImport.php — Unified bulk-import handler (Excel / CSV)
  *
  * POST params:
- *   module   : income | expense | loan | project | asset
+ *   module   : income | expense | loan | debt | project | asset
  *   file     : uploaded file (multipart/form-data)
  *   csrf_token
  *
@@ -15,7 +15,6 @@ require_once 'security.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Shared\Date as SpreadsheetDate;
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -75,27 +74,47 @@ try {
     $reader->setReadDataOnly(true);
     $spreadsheet = $reader->load($tmpPath);
     $sheet       = $spreadsheet->getActiveSheet();
-    $rows        = $sheet->toArray(null, true, true, false); // 0-indexed numeric array
+    $rawRows     = $sheet->toArray(null, true, true, false); // 0-indexed numeric array
 } catch (\Throwable $e) {
     echo json_encode(['success' => false, 'messages' => 'No se pudo leer el archivo: ' . $e->getMessage()]);
     exit;
 }
 
-if (count($rows) < 2) {
+if (count($rawRows) < 2) {
     echo json_encode(['success' => false, 'messages' => 'El archivo está vacío o solo contiene la cabecera.']);
     exit;
 }
 
-/* Strip header row */
-array_shift($rows);
+/*
+ * Detect official downloadTemplate.php layout (Row 1: title banner, Row 2: INSTRUCCIONES, Row 3: column headers)
+ * vs plain 1-header spreadsheet/CSV (Row 1: column headers).
+ */
+$headerRowsToSkip = 1;
+$firstCell  = trim((string)($rawRows[0][0] ?? ''));
+$secondCell = trim((string)($rawRows[1][0] ?? ''));
+if (
+    count($rawRows) >= 4 &&
+    stripos($firstCell, 'Plantilla de ') === 0 &&
+    stripos($secondCell, 'INSTRUCCIONES:') === 0
+) {
+    $headerRowsToSkip = 3;
+}
 
-/* Remove completely empty rows */
-$rows = array_values(array_filter($rows, function ($r) {
-    foreach ($r as $cell) {
-        if ($cell !== null && trim((string)$cell) !== '') return true;
+/* Preserve exact 1-based Excel row numbers while filtering empty rows */
+$rows = [];
+for ($idx = $headerRowsToSkip, $len = count($rawRows); $idx < $len; $idx++) {
+    $r = $rawRows[$idx];
+    $hasData = false;
+    foreach ($r as $c) {
+        if ($c !== null && trim((string)$c) !== '') {
+            $hasData = true;
+            break;
+        }
     }
-    return false;
-}));
+    if ($hasData) {
+        $rows[] = ['excelRow' => $idx + 1, 'cells' => $r];
+    }
+}
 
 if (count($rows) === 0) {
     echo json_encode(['success' => false, 'messages' => 'El archivo no contiene filas de datos.']);
@@ -110,27 +129,51 @@ if (count($rows) > 500) {
 /* ── Helper: resolve date value (Excel serial or string) ─────────── */
 function resolveDate($val): ?string
 {
-    if ($val === null || trim((string)$val) === '') return null;
-    // Excel numeric date serial
-    if (is_numeric($val) && $val > 1000) {
-        try {
-            $ts = SpreadsheetDate::excelToTimestamp((float)$val);
-            return date('Y-m-d', $ts);
-        } catch (\Throwable $e) {}
+    if ($val === null) return null;
+    if ($val instanceof \DateTimeInterface) {
+        return $val->format('Y-m-d');
     }
-    // String date — accept common formats
+
     $str = trim((string)$val);
-    foreach (['Y-m-d', 'd/m/Y', 'd-m-Y', 'm/d/Y'] as $fmt) {
+    if ($str === '') return null;
+
+    // Excel numeric date serial (restrict to plausible modern serial dates ~1927-2173
+    // so bare numbers like "2026" or amounts are never misinterpreted as 1905 serials)
+    if (is_numeric($str)) {
+        $num = (float)$str;
+        if ($num >= 10000 && $num <= 100000) {
+            try {
+                $dtObj = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($num);
+                return $dtObj->format('Y-m-d');
+            } catch (\Throwable $e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    // String date — accept common explicit formats
+    foreach (['Y-m-d', 'Y-m-d H:i:s', 'Y/m/d', 'd/m/Y', 'd-m-Y', 'd/m/Y H:i:s', 'd/m/y', 'm/d/Y'] as $fmt) {
         $dt = \DateTime::createFromFormat($fmt, $str);
         if ($dt && $dt->format($fmt) === $str) {
-            return $dt->format('Y-m-d');
+            $y = (int)$dt->format('Y');
+            if ($y >= 1900 && $y <= 2100) {
+                return $dt->format('Y-m-d');
+            }
         }
     }
-    // Last resort: strtotime
-    $ts = strtotime($str);
-    if ($ts !== false) {
-        return date('Y-m-d', $ts);
+
+    // Last resort for English/ISO date strings containing separators
+    if (preg_match('/[\/\-]/', $str)) {
+        $ts = strtotime($str);
+        if ($ts !== false) {
+            $y = (int)date('Y', $ts);
+            if ($y >= 1900 && $y <= 2100) {
+                return date('Y-m-d', $ts);
+            }
+        }
     }
+
     return null;
 }
 
@@ -140,7 +183,24 @@ function cell(array $row, int $idx): string
     return isset($row[$idx]) ? trim((string)$row[$idx]) : '';
 }
 
-/* ── Load user accounts (for income, expense, loan) ─────────────── */
+/* ── Helper: parse monetary / numeric cell cleanly ──────────────── */
+function parseNumericCell(string $raw): ?float
+{
+    $clean = trim(str_ireplace(['S/', '$', 'PEN', 'USD', ' '], '', $raw));
+    if ($clean === '') return null;
+
+    // Convert "1,500.50" -> "1500.50"
+    if (preg_match('/^-?\d{1,3}(,\d{3})+(\.\d+)?$/', $clean)) {
+        $clean = str_replace(',', '', $clean);
+    } elseif (preg_match('/^-?\d+,\d{1,2}$/', $clean)) {
+        // Convert "150,50" -> "150.50"
+        $clean = str_replace(',', '.', $clean);
+    }
+
+    return is_numeric($clean) ? (float)$clean : null;
+}
+
+/* ── Load user accounts ──────────────────────────────────────────── */
 function getUserAccounts(mysqli $db, int $userId): array
 {
     $map  = [];
@@ -210,13 +270,16 @@ function processIncome(array $rows, int $userId, mysqli $db): array
         "INSERT INTO incomes (concept, account_id, category_id, project_id, income_date, amount, is_recurring, status, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     );
-    $stmtAcc = $db->prepare("UPDATE accounts SET current_balance = current_balance + ? WHERE account_id = ?");
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
+    }
 
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum = $i + 2; // 1-based + 1 for header
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $concept     = cell($row, 0);
@@ -226,11 +289,11 @@ function processIncome(array $rows, int $userId, mysqli $db): array
         $projName    = strtolower(cell($row, 4));
         $dateRaw     = $row[5] ?? null;
         $statusRaw   = strtoupper(cell($row, 6)) ?: 'CONFIRMED';
-        $isRecurring = in_array(strtolower(cell($row, 7)), ['1', 'si', 'sí', 'yes', 'true']) ? 1 : 0;
+        $isRecurring = in_array(strtolower(cell($row, 7)), ['1', 'si', 'sí', 'yes', 'true'], true) ? 1 : 0;
         $notes       = cell($row, 8);
 
         if (empty($concept)) $rowErrors[] = ['field' => 'Concepto', 'message' => 'Campo requerido.'];
-        $amount = is_numeric($amountRaw) ? (float)$amountRaw : null;
+        $amount = parseNumericCell($amountRaw);
         if ($amount === null || $amount <= 0) $rowErrors[] = ['field' => 'Monto', 'message' => 'Debe ser un número mayor a 0.'];
 
         $accountId = $accounts[$accountName] ?? null;
@@ -250,22 +313,19 @@ function processIncome(array $rows, int $userId, mysqli $db): array
             continue;
         }
 
-        $stmt->bind_param("siiiidissi",
-            $concept, $accountId, $categoryId, $projectId,
-            $incomeDate, $amount, $isRecurring, $status, $notes, $userId
-        );
-        if ($stmt->execute()) {
-            if ($status === 'CONFIRMED') {
-                $stmtAcc->bind_param("di", $amount, $accountId);
-                $stmtAcc->execute();
-            }
+        // Account balance update handled automatically by trg_incomes_after_insert
+        try {
+            $stmt->bind_param("siiisdissi",
+                $concept, $accountId, $categoryId, $projectId,
+                $incomeDate, $amount, $isRecurring, $status, $notes, $userId
+            );
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
-    $stmtAcc->close();
     return compact('inserted', 'errors');
 }
 
@@ -284,13 +344,16 @@ function processExpense(array $rows, int $userId, mysqli $db): array
         "INSERT INTO expenses (concept, account_id, category_id, project_id, expense_date, amount, status, receipt_image, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
     );
-    $stmtAcc = $db->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
+    }
 
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum    = $i + 2;
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $concept     = cell($row, 0);
@@ -303,7 +366,7 @@ function processExpense(array $rows, int $userId, mysqli $db): array
         $notes       = cell($row, 7);
 
         if (empty($concept)) $rowErrors[] = ['field' => 'Concepto', 'message' => 'Campo requerido.'];
-        $amount = is_numeric($amountRaw) ? (float)$amountRaw : null;
+        $amount = parseNumericCell($amountRaw);
         if ($amount === null || $amount <= 0) $rowErrors[] = ['field' => 'Monto', 'message' => 'Debe ser un número mayor a 0.'];
 
         $accountId = $accounts[$accountName] ?? null;
@@ -322,22 +385,19 @@ function processExpense(array $rows, int $userId, mysqli $db): array
             continue;
         }
 
-        $stmt->bind_param("siiiidssi",
-            $concept, $accountId, $categoryId, $projectId,
-            $expenseDate, $amount, $statusRaw, $notes, $userId
-        );
-        if ($stmt->execute()) {
-            if ($statusRaw === 'PAGADO') {
-                $stmtAcc->bind_param("di", $amount, $accountId);
-                $stmtAcc->execute();
-            }
+        // Account balance update handled automatically by trg_expenses_after_insert
+        try {
+            $stmt->bind_param("siiisdssi",
+                $concept, $accountId, $categoryId, $projectId,
+                $expenseDate, $amount, $statusRaw, $notes, $userId
+            );
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
-    $stmtAcc->close();
     return compact('inserted', 'errors');
 }
 
@@ -356,13 +416,16 @@ function processLoan(array $rows, int $userId, mysqli $db): array
                             amount_repaid, balance_pending, status, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'PENDIENTE', ?, ?)"
     );
-    $stmtAcc = $db->prepare("UPDATE accounts SET current_balance = current_balance - ? WHERE account_id = ?");
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
+    }
 
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum    = $i + 2;
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $borrower    = cell($row, 0);
@@ -382,18 +445,23 @@ function processLoan(array $rows, int $userId, mysqli $db): array
         if (!$accountId) $rowErrors[] = ['field' => 'Cuenta', 'message' => "\"" . cell($row, 2) . "\" no encontrada o no le pertenece."];
 
         $loanDate = resolveDate($loanDateRaw);
-        if (!$loanDate) $rowErrors[] = ['field' => 'Fecha Préstamo', 'message' => 'Formato inválido.'];
+        if (!$loanDate) $rowErrors[] = ['field' => 'Fecha Préstamo', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
 
-        $dueDate  = $dueDateRaw ? resolveDate($dueDateRaw) : null;
+        $dueDate = null;
+        if (trim((string)$dueDateRaw) !== '') {
+            $dueDate = resolveDate($dueDateRaw);
+            if (!$dueDate) $rowErrors[] = ['field' => 'Fecha Vencimiento', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
+        }
 
-        $principal = is_numeric($principalRaw) ? (float)$principalRaw : null;
+        $principal = parseNumericCell($principalRaw);
         if ($principal === null || $principal <= 0) $rowErrors[] = ['field' => 'Capital', 'message' => 'Debe ser un número mayor a 0.'];
 
         $intTypeMap = ['NINGUNO' => 'NONE', 'PORCENTAJE' => 'PERCENTAGE', 'FIJO' => 'FIXED'];
         $intType    = $intTypeMap[$intType] ?? $intType;
         if (!in_array($intType, ['NONE', 'PERCENTAGE', 'FIXED'], true)) $intType = 'NONE';
 
-        $intValue = is_numeric($intValueRaw) && $intValueRaw > 0 ? (float)$intValueRaw : null;
+        $intValueParsed = parseNumericCell($intValueRaw);
+        $intValue = ($intValueParsed !== null && $intValueParsed > 0) ? $intValueParsed : null;
 
         if ($rowErrors) {
             foreach ($rowErrors as $e) $errors[] = array_merge(['row' => $rowNum], $e);
@@ -410,20 +478,19 @@ function processLoan(array $rows, int $userId, mysqli $db): array
             $intValue = null;
         }
 
-        $stmt->bind_param("ssissdsdddsi",
-            $borrower, $concept, $accountId, $loanDate, $dueDate,
-            $principal, $intType, $intValue, $total, $total, $notes, $userId
-        );
-        if ($stmt->execute()) {
-            $stmtAcc->bind_param("di", $principal, $accountId);
-            $stmtAcc->execute();
+        // Account balance update handled automatically by trg_loans_after_insert
+        try {
+            $stmt->bind_param("ssissdsdddsi",
+                $borrower, $concept, $accountId, $loanDate, $dueDate,
+                $principal, $intType, $intValue, $total, $total, $notes, $userId
+            );
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
-    $stmtAcc->close();
     return compact('inserted', 'errors');
 }
 
@@ -434,21 +501,21 @@ function processProject(array $rows, int $userId, mysqli $db): array
      * 0 project_name | 1 client_name | 2 budget | 3 start_date | 4 end_date
      * 5 status | 6 description
      */
-    $stmt = $db->prepare(
-        "INSERT INTO projects (project_name, client_name, budget, start_date, end_date, status, description, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-
-    // Check if projects table has created_by column (some versions may not)
     $colCheck = $db->query("SHOW COLUMNS FROM projects LIKE 'created_by'");
     $hasCreatedBy = $colCheck && $colCheck->num_rows > 0;
 
-    if (!$hasCreatedBy) {
-        $stmt->close();
-        $stmt = $db->prepare(
+    $stmt = $hasCreatedBy
+        ? $db->prepare(
+            "INSERT INTO projects (project_name, client_name, budget, start_date, end_date, status, description, created_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        )
+        : $db->prepare(
             "INSERT INTO projects (project_name, client_name, budget, start_date, end_date, status, description)
              VALUES (?, ?, ?, ?, ?, ?, ?)"
         );
+
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
     }
 
     $allowedStatuses = ['ACTIVE', 'ON_HOLD', 'COMPLETED'];
@@ -456,8 +523,9 @@ function processProject(array $rows, int $userId, mysqli $db): array
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum    = $i + 2;
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $name        = cell($row, 0);
@@ -469,31 +537,40 @@ function processProject(array $rows, int $userId, mysqli $db): array
         $description = cell($row, 6);
 
         if (empty($name)) $rowErrors[] = ['field' => 'Nombre Proyecto', 'message' => 'Campo requerido.'];
-        $budget = is_numeric($budgetRaw) ? (float)$budgetRaw : null;
+        $budget = parseNumericCell($budgetRaw);
         if ($budget === null || $budget <= 0) $rowErrors[] = ['field' => 'Presupuesto', 'message' => 'Debe ser un número mayor a 0.'];
 
         $statusMap = ['ACTIVO' => 'ACTIVE', 'EN_ESPERA' => 'ON_HOLD', 'COMPLETADO' => 'COMPLETED'];
         $status    = $statusMap[$statusRaw] ?? $statusRaw;
         if (!in_array($status, $allowedStatuses, true)) $status = 'ACTIVE';
 
-        $startDate = $startRaw ? resolveDate($startRaw) : null;
-        $endDate   = $endRaw   ? resolveDate($endRaw)   : null;
+        $startDate = null;
+        if (trim((string)$startRaw) !== '') {
+            $startDate = resolveDate($startRaw);
+            if (!$startDate) $rowErrors[] = ['field' => 'Fecha Inicio', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
+        }
+
+        $endDate = null;
+        if (trim((string)$endRaw) !== '') {
+            $endDate = resolveDate($endRaw);
+            if (!$endDate) $rowErrors[] = ['field' => 'Fecha Fin', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
+        }
 
         if ($rowErrors) {
             foreach ($rowErrors as $e) $errors[] = array_merge(['row' => $rowNum], $e);
             continue;
         }
 
-        if ($hasCreatedBy) {
-            $stmt->bind_param("ssdssssi", $name, $client, $budget, $startDate, $endDate, $status, $description, $userId);
-        } else {
-            $stmt->bind_param("ssdssss", $name, $client, $budget, $startDate, $endDate, $status, $description);
-        }
-
-        if ($stmt->execute()) {
+        try {
+            if ($hasCreatedBy) {
+                $stmt->bind_param("ssdssssi", $name, $client, $budget, $startDate, $endDate, $status, $description, $userId);
+            } else {
+                $stmt->bind_param("ssdssss", $name, $client, $budget, $startDate, $endDate, $status, $description);
+            }
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
@@ -515,12 +592,16 @@ function processAsset(array $rows, int $userId, mysqli $db): array
                              document_number, location_or_custody, status, image_path, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)"
     );
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
+    }
 
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum    = $i + 2;
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $assetName   = cell($row, 0);
@@ -533,7 +614,6 @@ function processAsset(array $rows, int $userId, mysqli $db): array
         $statusRaw   = strtoupper(cell($row, 7)) ?: 'ACTIVO';
         $notes       = cell($row, 8);
 
-        // Normalize category aliases
         $catMap = [
             'VEHICULO'             => 'VEHICULO',
             'VEHÍCULO'             => 'VEHICULO',
@@ -551,11 +631,17 @@ function processAsset(array $rows, int $userId, mysqli $db): array
         if (!in_array($category, $allowedCats, true))
             $rowErrors[] = ['field' => 'Categoría', 'message' => "\"$category\" no es válida. Use: " . implode(', ', $allowedCats)];
 
-        $estVal = is_numeric($estValRaw) ? (float)$estValRaw : null;
+        $estVal = parseNumericCell($estValRaw);
         if ($estVal === null || $estVal <= 0) $rowErrors[] = ['field' => 'Valor Estimado', 'message' => 'Debe ser un número mayor a 0.'];
 
-        $purchPrice = is_numeric($purchPrRaw) && $purchPrRaw > 0 ? (float)$purchPrRaw : null;
-        $purchDate  = $purchDateRaw ? resolveDate($purchDateRaw) : null;
+        $purchParsed = parseNumericCell($purchPrRaw);
+        $purchPrice  = ($purchParsed !== null && $purchParsed > 0) ? $purchParsed : null;
+
+        $purchDate = null;
+        if (trim((string)$purchDateRaw) !== '') {
+            $purchDate = resolveDate($purchDateRaw);
+            if (!$purchDate) $rowErrors[] = ['field' => 'Fecha Adquisición', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
+        }
 
         $statusNorm = strtoupper(str_replace(' ', '_', $statusRaw));
         if (!in_array($statusNorm, $allowedStatuses, true)) $statusNorm = 'ACTIVO';
@@ -565,14 +651,15 @@ function processAsset(array $rows, int $userId, mysqli $db): array
             continue;
         }
 
-        $stmt->bind_param("ssddsssssi",
-            $assetName, $category, $estVal, $purchDate, $purchPrice,
-            $docNumber, $location, $statusNorm, $notes, $userId
-        );
-        if ($stmt->execute()) {
+        try {
+            $stmt->bind_param("ssdsdssssi",
+                $assetName, $category, $estVal, $purchDate, $purchPrice,
+                $docNumber, $location, $statusNorm, $notes, $userId
+            );
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
@@ -594,12 +681,16 @@ function processDebt(array $rows, int $userId, mysqli $db): array
                             amount_paid, balance_pending, status, notes, created_by)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, 'PENDIENTE', ?, ?)"
     );
+    if (!$stmt) {
+        return ['inserted' => 0, 'errors' => [['row' => 1, 'field' => 'BD', 'message' => 'Error preparando consulta: ' . $db->error]]];
+    }
 
     $inserted = 0;
     $errors   = [];
 
-    foreach ($rows as $i => $row) {
-        $rowNum    = $i + 2;
+    foreach ($rows as $entry) {
+        $rowNum    = $entry['excelRow'];
+        $row       = $entry['cells'];
         $rowErrors = [];
 
         $lender      = cell($row, 0);
@@ -624,18 +715,23 @@ function processDebt(array $rows, int $userId, mysqli $db): array
         if (!$accountId) $rowErrors[] = ['field' => 'Cuenta Destino', 'message' => "\"" . cell($row, 3) . "\" no encontrada o no le pertenece."];
 
         $debtDate = resolveDate($debtDateRaw);
-        if (!$debtDate) $rowErrors[] = ['field' => 'Fecha Préstamo', 'message' => 'Formato inválido.'];
+        if (!$debtDate) $rowErrors[] = ['field' => 'Fecha Préstamo', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
 
-        $dueDate = $dueDateRaw ? resolveDate($dueDateRaw) : null;
+        $dueDate = null;
+        if (trim((string)$dueDateRaw) !== '') {
+            $dueDate = resolveDate($dueDateRaw);
+            if (!$dueDate) $rowErrors[] = ['field' => 'Fecha Vencimiento', 'message' => 'Formato inválido. Use YYYY-MM-DD o DD/MM/YYYY.'];
+        }
 
-        $principal = is_numeric($principalRaw) ? (float)$principalRaw : null;
+        $principal = parseNumericCell($principalRaw);
         if ($principal === null || $principal <= 0) $rowErrors[] = ['field' => 'Capital', 'message' => 'Debe ser un número mayor a 0.'];
 
         $intTypeMap = ['NINGUNO' => 'NONE', 'PORCENTAJE' => 'PERCENTAGE', 'FIJO' => 'FIXED'];
         $intType    = $intTypeMap[$intType] ?? $intType;
         if (!in_array($intType, ['NONE', 'PERCENTAGE', 'FIXED'], true)) $intType = 'NONE';
 
-        $intValue = is_numeric($intValueRaw) && $intValueRaw > 0 ? (float)$intValueRaw : null;
+        $intValueParsed = parseNumericCell($intValueRaw);
+        $intValue = ($intValueParsed !== null && $intValueParsed > 0) ? $intValueParsed : null;
 
         if ($rowErrors) {
             foreach ($rowErrors as $e) $errors[] = array_merge(['row' => $rowNum], $e);
@@ -652,14 +748,15 @@ function processDebt(array $rows, int $userId, mysqli $db): array
         }
 
         // Account balance update handled automatically by trg_debts_after_insert
-        $stmt->bind_param("sssissdsdddsi",
-            $lender, $lenderType, $concept, $accountId, $debtDate, $dueDate,
-            $principal, $intType, $intValue, $total, $total, $notes, $userId
-        );
-        if ($stmt->execute()) {
+        try {
+            $stmt->bind_param("sssissdsdddsi",
+                $lender, $lenderType, $concept, $accountId, $debtDate, $dueDate,
+                $principal, $intType, $intValue, $total, $total, $notes, $userId
+            );
+            $stmt->execute();
             $inserted++;
-        } else {
-            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $db->error];
+        } catch (\Throwable $e) {
+            $errors[] = ['row' => $rowNum, 'field' => 'BD', 'message' => 'Error al insertar: ' . $e->getMessage()];
         }
     }
     $stmt->close();
