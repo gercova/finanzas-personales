@@ -239,18 +239,18 @@
             <table class="table table-hover table-striped" style="margin-bottom:0;">
               <thead>
                 <tr>
-                  <th>Nombre de Cuenta</th>
-                  <th>Tipo</th>
-                  <th>Moneda</th>
-                  <th class="text-right">Saldo Actual</th>
-                  <th style="width:25%;">Participación</th>
+                  <SortableTh label="Nombre de Cuenta" sort-key="account_name" :active-key="accSortKey" :sort-dir="accSortDir" @sort="toggleAccSort" />
+                  <SortableTh label="Tipo" sort-key="account_type" :active-key="accSortKey" :sort-dir="accSortDir" @sort="toggleAccSort" />
+                  <SortableTh label="Moneda" sort-key="currency" :active-key="accSortKey" :sort-dir="accSortDir" @sort="toggleAccSort" />
+                  <SortableTh label="Saldo Actual" sort-key="current_balance" :active-key="accSortKey" :sort-dir="accSortDir" align="right" @sort="toggleAccSort" />
+                  <SortableTh label="Participación" sort-key="share" :active-key="accSortKey" :sort-dir="accSortDir" :th-style="{ width: '25%' }" @sort="toggleAccSort" />
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="accounts.length === 0">
+                <tr v-if="sortedAccounts.length === 0">
                   <td colspan="5" class="text-center text-muted" style="padding:20px;">No hay cuentas activas.</td>
                 </tr>
-                <tr v-for="acc in accounts" :key="acc.account_name">
+                <tr v-for="acc in sortedAccounts" :key="acc.account_name">
                   <td><strong>{{ acc.account_name }}</strong></td>
                   <td><span class="label label-default">{{ acc.account_type }}</span></td>
                   <td>{{ acc.currency || 'S/' }}</td>
@@ -280,12 +280,24 @@
 import { ref, computed, onMounted } from 'vue'
 import { useReportStore } from '@/stores/useReportStore'
 import FinancialBarChart from '@/components/FinancialBarChart.vue'
+import SortableTh from '@/components/SortableTh.vue'
+import { useTableSort } from '@/utils/sort'
 
 const store = useReportStore()
 const barChartRef = ref(null)
 
 const kpi             = computed(() => store.kpi)
 const accounts        = computed(() => store.accounts)
+const {
+  sortKey: accSortKey,
+  sortDir: accSortDir,
+  toggleSort: toggleAccSort,
+  sortRows: sortAccRows
+} = useTableSort('', 'asc', {
+  current_balance: r => parseFloat(r.current_balance) || 0,
+  share: r => calcAccountShare(r.current_balance),
+})
+const sortedAccounts  = computed(() => sortAccRows(accounts.value))
 const monthlyExpenses = computed(() => store.monthlyExpenses)
 const topCategories   = computed(() => store.topCategories)
 const currentYear     = computed(() => store.currentYear)

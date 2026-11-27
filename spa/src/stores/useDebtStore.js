@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, reactive, computed, watch } from 'vue'
 import * as api from '@/api'
 import { cacheGet, cacheSet, cacheDel } from './cache'
+import { sortList } from '@/utils/sort'
 
 const CACHE_KEY = 'v3_debts'
 
@@ -17,6 +18,21 @@ export const useDebtStore = defineStore('debt', () => {
   const search   = ref('')
   const page     = ref(1)
   const pageSize = ref(15)
+  const sortKey  = ref('')
+  const sortDir  = ref('asc')
+  let sortGetter = null
+
+  function setSort(key, valueGetter = null) {
+    if (!key) return
+    if (sortKey.value === key) {
+      sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+    } else {
+      sortKey.value = key
+      sortDir.value = 'asc'
+    }
+    sortGetter = typeof valueGetter === 'function' ? valueGetter : null
+    page.value = 1
+  }
 
   const filters = reactive({
     status: '',             // '', 'PENDIENTE', 'PARCIAL', 'PAGADO', 'UNPAID', 'OVERDUE'
@@ -158,12 +174,17 @@ export const useDebtStore = defineStore('debt', () => {
     })
   })
 
+  const sorted = computed(() => {
+    if (!sortKey.value) return filtered.value
+    return sortList(filtered.value, sortKey.value, sortDir.value, sortGetter)
+  })
+
   const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)))
 
   const pageRows = computed(() => {
     const safePage = Math.min(page.value, totalPages.value)
     const s = (safePage - 1) * pageSize.value
-    return filtered.value.slice(s, s + pageSize.value)
+    return sorted.value.slice(s, s + pageSize.value)
   })
 
   async function load(force = false) {
@@ -200,6 +221,7 @@ export const useDebtStore = defineStore('debt', () => {
 
   return {
     rows, loading, error, search, page, pageSize,
+    sortKey, sortDir, setSort,
     filters, activeFilterCount, resetFilters,
     filtered, totalPages, pageRows,
     load, reload, invalidate

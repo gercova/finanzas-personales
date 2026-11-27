@@ -477,6 +477,14 @@ const reportStore    = useReportStore()
 const accountStore   = useAccountStore()
 const optionsStore   = useFormOptionsStore()
 
+function interestNumericValue(row) {
+  if (!row.interest_type || row.interest_type === 'NONE' || row.interest_type === 'NINGUNO') return 0
+  if (row.interest_type === 'PERCENTAGE' || row.interest_type === 'PORCENTAJE') {
+    return ((Number(row.principal_amount) || 0) * (Number(row.interest_value) || 0)) / 100
+  }
+  return Number(row.interest_value) || 0
+}
+
 const debtColumns = [
   { key: '_index',           label: '#' },
   { key: 'lender_name',      label: 'Acreedor / Entidad' },
@@ -485,7 +493,7 @@ const debtColumns = [
   { key: 'debt_date',        label: 'Fecha Préstamo' },
   { key: 'due_date',         label: 'Vencimiento' },
   { key: 'principal_amount', label: 'Capital' },
-  { key: 'interest',         label: 'Interés' },
+  { key: 'interest',         label: 'Interés',       sortValue: interestNumericValue },
   { key: 'total_payable',    label: 'Total a Pagar' },
   { key: 'amount_paid',      label: 'Pagado' },
   { key: 'balance_pending',  label: 'Por Pagar' },
@@ -496,7 +504,7 @@ const debtColumns = [
 const lenderColumns = [
   { key: '_index',      label: '#' },
   { key: 'lender_type', label: 'Tipo' },
-  { key: 'document',    label: 'Documento' },
+  { key: 'document',    label: 'Documento', sortValue: r => `${r.document_type || ''} ${r.document_number || ''}`.trim() },
   { key: 'full_name',   label: 'Nombre / Razón Social' },
   { key: 'phone',       label: 'Teléfono' },
   { key: 'address',     label: 'Dirección' },

@@ -39,11 +39,12 @@
         <div class="form-group">
           <label><i class="glyphicon glyphicon-file"></i> Seleccionar archivo Excel o CSV</label>
           <div class="import-dropzone"
-               :class="{ 'dz-active': dragging, 'dz-error': !!fileError, 'dz-ok': fileOk }"
-               @click="triggerFileInput"
-               @dragover.prevent="dragging = true"
-               @dragleave="dragging = false"
-               @drop.prevent="onDrop">
+              :class="{ 'dz-active': dragging, 'dz-error': !!fileError, 'dz-ok': fileOk }"
+              @click="triggerFileInput"
+              @dragover.prevent="dragging = true"
+              @dragleave="dragging = false"
+              @drop.prevent="onDrop"
+            >
             <i class="glyphicon glyphicon-cloud-upload"
                style="font-size:36px;color:#aaa;display:block;margin-bottom:8px;"></i>
             <span v-if="!selectedFile" style="color:#777;font-size:14px;">
@@ -108,13 +109,13 @@
             <table class="table table-condensed table-bordered" style="font-size:12px;">
               <thead style="background:#f5f5f5;">
                 <tr>
-                  <th style="width:60px;">Fila</th>
-                  <th style="width:120px;">Campo</th>
-                  <th>Error</th>
+                  <SortableTh label="Fila" sort-key="row" :active-key="errSortKey" :sort-dir="errSortDir" :th-style="{ width: '75px' }" @sort="toggleErrSort" />
+                  <SortableTh label="Campo" sort-key="field" :active-key="errSortKey" :sort-dir="errSortDir" :th-style="{ width: '130px' }" @sort="toggleErrSort" />
+                  <SortableTh label="Error" sort-key="message" :active-key="errSortKey" :sort-dir="errSortDir" @sort="toggleErrSort" />
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(e, i) in result.errors" :key="i">
+                <tr v-for="(e, i) in sortedErrors" :key="i">
                   <td class="text-center"><strong>{{ e.row }}</strong></td>
                   <td>{{ e.field }}</td>
                   <td>{{ e.message }}</td>
@@ -150,12 +151,21 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppModal from './AppModal.vue'
+import SortableTh from './SortableTh.vue'
+import { useTableSort } from '@/utils/sort'
 import * as api from '@/api'
 
 const props = defineProps({
   module: { type: String, required: true }
 })
 const emit = defineEmits(['imported'])
+
+const {
+  sortKey: errSortKey,
+  sortDir: errSortDir,
+  toggleSort: toggleErrSort,
+  sortRows: sortErrRows
+} = useTableSort('row', 'asc')
 
 // Composition-API ref for the hidden file input (replaces Options-API $refs)
 const fileInputRef = ref(null)
@@ -167,6 +177,7 @@ const selectedFile = ref(null)
 const fileError    = ref('')
 const uploading    = ref(false)
 const result       = ref({ success: false, messages: '', inserted: 0, errors: [] })
+const sortedErrors = computed(() => sortErrRows(result.value?.errors || []))
 
 const MAX_MB = 5
 

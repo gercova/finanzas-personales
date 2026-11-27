@@ -4,13 +4,12 @@
  * Safe, DELIMITER-aware SQL migration parser, executor, object inspector, and change logger
  * for MySQL / MariaDB.
  */
-class MigrationRunner
-{
+class MigrationRunner {
+    
     private mysqli $db;
     private string $migrationsDir;
 
-    public function __construct(mysqli $db, ?string $migrationsDir = null)
-    {
+    public function __construct(mysqli $db, ?string $migrationsDir = null) {
         $this->db            = $db;
         $this->migrationsDir = $migrationsDir ?? (__DIR__ . '/../database/migrations');
         if (!is_dir($this->migrationsDir)) {
@@ -22,8 +21,7 @@ class MigrationRunner
     /**
      * Ensure schema_migrations tracking table exists.
      */
-    private function ensureTrackingTable(): void
-    {
+    private function ensureTrackingTable(): void {
         $sql = "CREATE TABLE IF NOT EXISTS `schema_migrations` (
             `migration_id` INT AUTO_INCREMENT PRIMARY KEY,
             `migration_key` VARCHAR(190) NOT NULL,
@@ -49,8 +47,7 @@ class MigrationRunner
     /**
      * Discover SQL migration files under database/migrations/.
      */
-    public function listAvailableMigrations(): array
-    {
+    public function listAvailableMigrations(): array {
         $files = glob($this->migrationsDir . '/*.sql') ?: [];
         sort($files, SORT_NATURAL);
 
@@ -354,8 +351,7 @@ class MigrationRunner
     /**
      * Integrate a new migration SQL script into database/migrations/, optionally executing immediately.
      */
-    public function integrateMigration(string $title, string $description, string $sql, int $userId, bool $executeNow = true): array
-    {
+    public function integrateMigration(string $title, string $description, string $sql, int $userId, bool $executeNow = true): array {
         $title = trim($title);
         $sql   = trim($sql);
         if ($title === '' || $sql === '') {
@@ -500,8 +496,7 @@ class MigrationRunner
         ];
     }
 
-    private function getAppliedMap(): array
-    {
+    private function getAppliedMap(): array {
         $map = [];
         $res = $this->db->query("SELECT * FROM `schema_migrations`");
         if ($res) {
@@ -513,8 +508,7 @@ class MigrationRunner
         return $map;
     }
 
-    private function parseHeaderMetadata(string $sql, string $fallbackKey): array
-    {
+    private function parseHeaderMetadata(string $sql, string $fallbackKey): array {
         $title = $fallbackKey;
         $desc  = '';
         if (preg_match('/^\s*--\s*Title:\s*(.+)$/im', $sql, $m)) {
@@ -530,8 +524,7 @@ class MigrationRunner
      * DELIMITER-aware SQL statement splitter supporting triggers, procedures, views, tables,
      * single/double/backtick quotes, and comments.
      */
-    public function splitSqlStatements(string $sql): array
-    {
+    public function splitSqlStatements(string $sql): array {
         $lines      = preg_split("/\r\n|\n|\r/", $sql);
         $delimiter  = ';';
         $buffer     = '';
@@ -647,8 +640,7 @@ class MigrationRunner
     /**
      * Classify a SQL statement to produce human-readable object change metadata.
      */
-    private function describeStatement(string $sql): array
-    {
+    private function describeStatement(string $sql): array {
         $clean = preg_replace('/\/\*![0-9]+\s*(.*?)\*\//s', '$1', trim($sql));
         $clean = preg_replace('/\s+/', ' ', trim($clean));
 

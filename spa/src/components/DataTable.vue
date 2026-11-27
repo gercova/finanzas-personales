@@ -54,14 +54,18 @@
         <table class="table table-hover" style="width:100%;">
           <thead>
             <tr>
-              <th
+              <SortableTh
                 v-for="col in columns"
                 :key="col.key"
-                :class="col.align === 'right' ? 'text-right' : col.align === 'center' ? 'text-center' : ''"
-                :style="col.thStyle"
-              >
-                {{ col.label }}
-              </th>
+                :label="col.label"
+                :sort-key="col.key"
+                :active-key="store.sortKey || ''"
+                :sort-dir="store.sortDir || 'asc'"
+                :align="col.align || ''"
+                :th-style="col.thStyle"
+                :sortable="isSortable(col)"
+                @sort="onSort(col)"
+              />
             </tr>
           </thead>
           <tbody>
@@ -112,6 +116,7 @@
 <script setup>
 import { computed } from 'vue'
 import AppPagination from './AppPagination.vue'
+import SortableTh    from './SortableTh.vue'
 
 const props = defineProps({
   title:       { type: String,   default: '' },
@@ -125,6 +130,15 @@ const props = defineProps({
 const headingStyle = computed(() =>
   props.headerColor ? { background: props.headerColor, color: '#fff' } : {}
 )
+
+function isSortable(col) {
+  return col.sortable !== false && col.key !== '_index' && col.key !== 'actions' && typeof props.store?.setSort === 'function'
+}
+
+function onSort(col) {
+  if (!isSortable(col)) return
+  props.store.setSort(col.key, col.sortValue)
+}
 </script>
 
 <style>

@@ -148,21 +148,21 @@
                 <thead>
                   <tr style="background:#f9f9f9;">
                     <th style="width:4%;">#</th>
-                    <th>Migración / Archivo</th>
-                    <th>Objetos BD</th>
-                    <th class="text-center">Sentencias</th>
-                    <th class="text-center">Estado</th>
-                    <th>Última Ejecución</th>
+                    <SortableTh label="Migración / Archivo" sort-key="title" :active-key="migSortKey" :sort-dir="migSortDir" @sort="toggleMigSort" />
+                    <SortableTh label="Objetos BD" sort-key="object_types" :active-key="migSortKey" :sort-dir="migSortDir" @sort="toggleMigSort" />
+                    <SortableTh label="Sentencias" sort-key="statement_count" :active-key="migSortKey" :sort-dir="migSortDir" align="center" @sort="toggleMigSort" />
+                    <SortableTh label="Estado" sort-key="status" :active-key="migSortKey" :sort-dir="migSortDir" align="center" @sort="toggleMigSort" />
+                    <SortableTh label="Última Ejecución" sort-key="applied_at" :active-key="migSortKey" :sort-dir="migSortDir" @sort="toggleMigSort" />
                     <th class="text-right" style="min-width:190px;">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="migrations.length === 0">
+                  <tr v-if="sortedMigrations.length === 0">
                     <td colspan="7" class="text-center text-muted" style="padding:20px;">
                       No se encontraron scripts de migración en <code>database/migrations/</code>.
                     </td>
                   </tr>
-                  <tr v-for="(mig, idx) in migrations" :key="mig.migration_key">
+                  <tr v-for="(mig, idx) in sortedMigrations" :key="mig.migration_key">
                     <td>{{ idx + 1 }}</td>
                     <td>
                       <strong>{{ mig.title }}</strong><br />
@@ -242,21 +242,21 @@
               <table class="table table-striped table-condensed" style="margin-bottom:0;">
                 <thead>
                   <tr>
-                    <th>Fecha y Hora</th>
-                    <th>Migración</th>
-                    <th>Categoría</th>
-                    <th>Estado</th>
-                    <th>Cambios Aplicados sobre Objetos BD</th>
-                    <th class="text-right">Duración</th>
+                    <SortableTh label="Fecha y Hora" sort-key="executed_at" :active-key="histSortKey" :sort-dir="histSortDir" @sort="toggleHistSort" />
+                    <SortableTh label="Migración" sort-key="title" :active-key="histSortKey" :sort-dir="histSortDir" @sort="toggleHistSort" />
+                    <SortableTh label="Categoría" sort-key="category" :active-key="histSortKey" :sort-dir="histSortDir" @sort="toggleHistSort" />
+                    <SortableTh label="Estado" sort-key="status" :active-key="histSortKey" :sort-dir="histSortDir" @sort="toggleHistSort" />
+                    <SortableTh label="Cambios Aplicados sobre Objetos BD" sort-key="changes_applied" :active-key="histSortKey" :sort-dir="histSortDir" @sort="toggleHistSort" />
+                    <SortableTh label="Duración" sort-key="execution_ms" :active-key="histSortKey" :sort-dir="histSortDir" align="right" @sort="toggleHistSort" />
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="history.length === 0">
+                  <tr v-if="sortedHistory.length === 0">
                     <td colspan="6" class="text-center text-muted" style="padding:20px;">
                       Aún no se han ejecutado migraciones registradas en <code>schema_migrations</code>.
                     </td>
                   </tr>
-                  <tr v-for="item in history" :key="item.migration_id">
+                  <tr v-for="item in sortedHistory" :key="item.migration_id">
                     <td style="white-space:nowrap;font-size:12px;">
                       {{ item.executed_at }}<br />
                       <small class="text-muted">por <strong>{{ item.executed_by_username }}</strong></small>
@@ -402,19 +402,19 @@
               <table class="table table-condensed table-striped" style="margin-bottom:0;">
                 <thead>
                   <tr>
-                    <th>Fecha</th>
-                    <th>Evento</th>
-                    <th>Clave</th>
-                    <th>Valor Anterior</th>
-                    <th>Valor Nuevo</th>
-                    <th>Usuario</th>
+                    <SortableTh label="Fecha" sort-key="created_at" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
+                    <SortableTh label="Evento" sort-key="event_type" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
+                    <SortableTh label="Clave" sort-key="target_key" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
+                    <SortableTh label="Valor Anterior" sort-key="old_value" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
+                    <SortableTh label="Valor Nuevo" sort-key="new_value" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
+                    <SortableTh label="Usuario" sort-key="performed_by_username" :active-key="auditSortKey" :sort-dir="auditSortDir" @sort="toggleAuditSort" />
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="auditLogs.length === 0">
+                  <tr v-if="sortedAuditLogs.length === 0">
                     <td colspan="6" class="text-center text-muted" style="padding:16px;">Sin eventos de auditoría registrados aún.</td>
                   </tr>
-                  <tr v-for="log in auditLogs" :key="log.audit_id">
+                  <tr v-for="log in sortedAuditLogs" :key="log.audit_id">
                     <td>{{ log.created_at }}</td>
                     <td><span class="label label-info">{{ log.event_type }}</span></td>
                     <td><code>{{ log.target_key }}</code></td>
@@ -439,9 +439,15 @@
               <div class="panel-heading"><strong>Tablas ({{ inventory.tables.length }})</strong></div>
               <div class="table-responsive">
                 <table class="table table-condensed table-striped" style="margin-bottom:0;font-size:12.5px;">
-                  <thead><tr><th>Tabla</th><th>Motor</th><th class="text-right">Filas aprox.</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <SortableTh label="Tabla" sort-key="name" :active-key="tblSortKey" :sort-dir="tblSortDir" @sort="toggleTblSort" />
+                      <SortableTh label="Motor" sort-key="engine" :active-key="tblSortKey" :sort-dir="tblSortDir" @sort="toggleTblSort" />
+                      <SortableTh label="Filas aprox." sort-key="rows" :active-key="tblSortKey" :sort-dir="tblSortDir" align="right" @sort="toggleTblSort" />
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr v-for="t in inventory.tables" :key="t.name">
+                    <tr v-for="t in sortedInvTables" :key="t.name">
                       <td><code>{{ t.name }}</code></td>
                       <td>{{ t.engine }}</td>
                       <td class="text-right">{{ t.rows }}</td>
@@ -457,9 +463,13 @@
               <div class="panel-heading"><strong>Vistas SQL ({{ inventory.views.length }})</strong></div>
               <div class="table-responsive">
                 <table class="table table-condensed table-striped" style="margin-bottom:0;font-size:12.5px;">
-                  <thead><tr><th>Vista</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <SortableTh label="Vista" sort-key="name" :active-key="viewSortKey" :sort-dir="viewSortDir" @sort="toggleViewSort" />
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr v-for="v in inventory.views" :key="v.name"><td><code>{{ v.name }}</code></td></tr>
+                    <tr v-for="v in sortedInvViews" :key="v.name"><td><code>{{ v.name }}</code></td></tr>
                   </tbody>
                 </table>
               </div>
@@ -469,9 +479,14 @@
               <div class="panel-heading"><strong>Procedimientos Almacenados ({{ inventory.procedures.length }})</strong></div>
               <div class="table-responsive">
                 <table class="table table-condensed table-striped" style="margin-bottom:0;font-size:12.5px;">
-                  <thead><tr><th>Nombre</th><th>Tipo</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <SortableTh label="Nombre" sort-key="name" :active-key="procSortKey" :sort-dir="procSortDir" @sort="toggleProcSort" />
+                      <SortableTh label="Tipo" sort-key="type" :active-key="procSortKey" :sort-dir="procSortDir" @sort="toggleProcSort" />
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr v-for="p in inventory.procedures" :key="p.name">
+                    <tr v-for="p in sortedInvProcedures" :key="p.name">
                       <td><code>{{ p.name }}</code></td>
                       <td><span class="label label-warning">{{ p.type }}</span></td>
                     </tr>
@@ -484,9 +499,15 @@
               <div class="panel-heading"><strong>Triggers ({{ inventory.triggers.length }})</strong></div>
               <div class="table-responsive">
                 <table class="table table-condensed table-striped" style="margin-bottom:0;font-size:12.5px;">
-                  <thead><tr><th>Trigger</th><th>Tabla</th><th>Momento</th></tr></thead>
+                  <thead>
+                    <tr>
+                      <SortableTh label="Trigger" sort-key="name" :active-key="trgSortKey" :sort-dir="trgSortDir" @sort="toggleTrgSort" />
+                      <SortableTh label="Tabla" sort-key="table" :active-key="trgSortKey" :sort-dir="trgSortDir" @sort="toggleTrgSort" />
+                      <SortableTh label="Momento" sort-key="timing" :active-key="trgSortKey" :sort-dir="trgSortDir" @sort="toggleTrgSort" />
+                    </tr>
+                  </thead>
                   <tbody>
-                    <tr v-for="tr in inventory.triggers" :key="tr.name">
+                    <tr v-for="tr in sortedInvTriggers" :key="tr.name">
                       <td><code>{{ tr.name }}</code></td>
                       <td>{{ tr.table }}</td>
                       <td><span class="label label-default">{{ tr.timing }}</span></td>
@@ -590,6 +611,8 @@
 import { ref, reactive, computed, inject, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import AppModal from '@/components/AppModal.vue'
+import SortableTh from '@/components/SortableTh.vue'
+import { useTableSort } from '@/utils/sort'
 import * as api from '@/api'
 
 const toast     = inject('toast')
@@ -633,6 +656,32 @@ const inspectedMig = ref(null)
 
 const appliedCount = computed(() => migrations.value.filter(m => m.status === 'APPLIED').length)
 const pendingCount = computed(() => migrations.value.filter(m => m.status !== 'APPLIED').length)
+
+const { sortKey: migSortKey, sortDir: migSortDir, toggleSort: toggleMigSort, sortRows: sortMigRows } = useTableSort('', 'asc', {
+  object_types: r => (r.object_types || []).join(', '),
+  status:       r => migrationStatusLabel(r.status),
+})
+const sortedMigrations = computed(() => sortMigRows(migrations.value))
+
+const { sortKey: histSortKey, sortDir: histSortDir, toggleSort: toggleHistSort, sortRows: sortHistRows } = useTableSort('', 'desc', {
+  changes_applied: r => (r.changes_applied || []).join(', '),
+})
+const sortedHistory = computed(() => sortHistRows(history.value))
+
+const { sortKey: auditSortKey, sortDir: auditSortDir, toggleSort: toggleAuditSort, sortRows: sortAuditRows } = useTableSort('', 'desc')
+const sortedAuditLogs = computed(() => sortAuditRows(auditLogs.value))
+
+const { sortKey: tblSortKey, sortDir: tblSortDir, toggleSort: toggleTblSort, sortRows: sortTblRows } = useTableSort('name', 'asc')
+const sortedInvTables = computed(() => sortTblRows(inventory.value.tables || []))
+
+const { sortKey: viewSortKey, sortDir: viewSortDir, toggleSort: toggleViewSort, sortRows: sortViewRows } = useTableSort('name', 'asc')
+const sortedInvViews = computed(() => sortViewRows(inventory.value.views || []))
+
+const { sortKey: procSortKey, sortDir: procSortDir, toggleSort: toggleProcSort, sortRows: sortProcRows } = useTableSort('name', 'asc')
+const sortedInvProcedures = computed(() => sortProcRows(inventory.value.procedures || []))
+
+const { sortKey: trgSortKey, sortDir: trgSortDir, toggleSort: toggleTrgSort, sortRows: sortTrgRows } = useTableSort('name', 'asc')
+const sortedInvTriggers = computed(() => sortTrgRows(inventory.value.triggers || []))
 
 function migrationBadgeClass(st) {
   if (st === 'APPLIED')  return 'success'

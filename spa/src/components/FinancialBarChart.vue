@@ -188,12 +188,12 @@
               <table class="table table-hover table-striped" style="margin-bottom:0; font-size:12.5px;">
                 <thead>
                   <tr style="background:#f5f5f5;">
-                    <th style="width:105px;">Fecha</th>
-                    <th>Concepto / Descripción</th>
-                    <th>Categoría / Origen</th>
-                    <th>Cuenta / Cliente</th>
-                    <th class="text-right" style="width:130px;">Monto</th>
-                    <th style="width:110px;">Estado</th>
+                    <SortableTh label="Fecha" sort-key="date" :active-key="ddSortKey" :sort-dir="ddSortDir" :th-style="{ width: '105px' }" @sort="onDrilldownSort" />
+                    <SortableTh label="Concepto / Descripción" sort-key="concept" :active-key="ddSortKey" :sort-dir="ddSortDir" @sort="onDrilldownSort" />
+                    <SortableTh label="Categoría / Origen" sort-key="category_name" :active-key="ddSortKey" :sort-dir="ddSortDir" @sort="onDrilldownSort" />
+                    <SortableTh label="Cuenta / Cliente" sort-key="account_name" :active-key="ddSortKey" :sort-dir="ddSortDir" @sort="onDrilldownSort" />
+                    <SortableTh label="Monto" sort-key="amount" :active-key="ddSortKey" :sort-dir="ddSortDir" align="right" :th-style="{ width: '130px' }" @sort="onDrilldownSort" />
+                    <SortableTh label="Estado" sort-key="status" :active-key="ddSortKey" :sort-dir="ddSortDir" :th-style="{ width: '110px' }" @sort="onDrilldownSort" />
                   </tr>
                 </thead>
                 <tbody>
@@ -271,6 +271,8 @@
 import { ref, reactive, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import Highcharts from 'highcharts'
 import exportingInit from 'highcharts/modules/exporting.js'
+import SortableTh from '@/components/SortableTh.vue'
+import { useTableSort } from '@/utils/sort'
 import * as api from '@/api'
 
 // Initialize Highcharts exporting plugin safely
@@ -347,17 +349,31 @@ function fmt(n) {
   return num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 }
 
+const {
+  sortKey: ddSortKey,
+  sortDir: ddSortDir,
+  toggleSort: toggleDdSort,
+  sortRows: sortDdRows
+} = useTableSort('date', 'desc')
+
+function onDrilldownSort(key) {
+  toggleDdSort(key)
+  drilldownPage.value = 1
+}
+
 // Filtered and paginated drilldown items
 const drilldownFilteredItems = computed(() => {
   if (!drilldownData.value?.items) return []
   const q = drilldownSearch.value.trim().toLowerCase()
-  if (!q) return drilldownData.value.items
-  return drilldownData.value.items.filter(it =>
-    String(it.concept || '').toLowerCase().includes(q) ||
-    String(it.category_name || '').toLowerCase().includes(q) ||
-    String(it.account_name || '').toLowerCase().includes(q) ||
-    String(it.status || '').toLowerCase().includes(q)
-  )
+  const base = !q
+    ? drilldownData.value.items
+    : drilldownData.value.items.filter(it =>
+        String(it.concept || '').toLowerCase().includes(q) ||
+        String(it.category_name || '').toLowerCase().includes(q) ||
+        String(it.account_name || '').toLowerCase().includes(q) ||
+        String(it.status || '').toLowerCase().includes(q)
+      )
+  return sortDdRows(base)
 })
 
 const drilldownTotalPages = computed(() =>

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { cacheGet, cacheSet, cacheDel } from './cache'
+import { sortList } from '@/utils/sort'
 
 /**
  * Formats ISO date YYYY-MM-DD as dd/mm/yyyy so free-text search matches both formats.
@@ -27,6 +28,21 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
     const search   = ref('')
     const page     = ref(1)
     const pageSize = ref(defaultPageSize)
+    const sortKey  = ref('')
+    const sortDir  = ref('asc')
+    let sortGetter = null
+
+    function setSort(key, valueGetter = null) {
+      if (!key) return
+      if (sortKey.value === key) {
+        sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc'
+      } else {
+        sortKey.value = key
+        sortDir.value = 'asc'
+      }
+      sortGetter = typeof valueGetter === 'function' ? valueGetter : null
+      page.value = 1
+    }
 
     const filtered = computed(() => {
       const q = search.value.trim().toLowerCase()
@@ -39,12 +55,17 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
       })
     })
 
+    const sorted = computed(() => {
+      if (!sortKey.value) return filtered.value
+      return sortList(filtered.value, sortKey.value, sortDir.value, sortGetter)
+    })
+
     const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)))
 
     const pageRows = computed(() => {
       const safePage = Math.min(page.value, totalPages.value)
       const start    = (safePage - 1) * pageSize.value
-      return filtered.value.slice(start, start + pageSize.value)
+      return sorted.value.slice(start, start + pageSize.value)
     })
 
     async function load(force = false) {
@@ -78,6 +99,10 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
       await load(true)
     }
 
-    return { rows, loading, error, search, page, pageSize, filtered, totalPages, pageRows, load, reload, invalidate }
+    return {
+      rows, loading, error, search, page, pageSize,
+      sortKey, sortDir, setSort,
+      filtered, totalPages, pageRows, load, reload, invalidate
+    }
   })
 }

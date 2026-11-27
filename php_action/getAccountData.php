@@ -11,8 +11,7 @@ if ($id <= 0) {
 }
 
 $stmt = $connect->prepare("
-    SELECT account_id AS id, account_name, account_type, account_number, currency,
-           initial_balance, current_balance, color, status
+    SELECT account_id AS id, account_name, account_type, account_number, currency, initial_balance, current_balance, color, status
     FROM accounts
     WHERE account_id = ? AND created_by = ? AND is_deleted = 0
 ");

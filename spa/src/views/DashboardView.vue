@@ -95,16 +95,16 @@
               <table class="table table-hover table-condensed" style="margin-bottom:0;">
                 <thead>
                   <tr style="background:#f9f9f9; font-size:12px;">
-                    <th>Cuenta</th>
-                    <th>Tipo</th>
-                    <th class="text-right">Saldo Actual</th>
+                    <SortableTh label="Cuenta" sort-key="name" :active-key="accSortKey" :sort-dir="accSortDir" @sort="toggleAccSort" />
+                    <SortableTh label="Tipo" sort-key="account_type" :active-key="accSortKey" :sort-dir="accSortDir" @sort="toggleAccSort" />
+                    <SortableTh label="Saldo Actual" sort-key="balance" :active-key="accSortKey" :sort-dir="accSortDir" align="right" @sort="toggleAccSort" />
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-if="accounts.length === 0">
+                  <tr v-if="sortedAccounts.length === 0">
                     <td colspan="3" class="text-center text-muted" style="padding:15px;">No hay cuentas registradas.</td>
                   </tr>
-                  <tr v-for="acc in accounts" :key="acc.account_id" style="font-size:13px;">
+                  <tr v-for="acc in sortedAccounts" :key="acc.account_id" style="font-size:13px;">
                     <td>
                       <span v-if="acc.color" :style="{ display:'inline-block', width:'10px', height:'10px', borderRadius:'50%', background:acc.color, marginRight:'6px' }"></span>
                       <strong>{{ acc.name || acc.account_name }}</strong>
@@ -303,12 +303,24 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/stores/useDashboardStore'
 import AppModal from '@/components/AppModal.vue'
+import SortableTh from '@/components/SortableTh.vue'
+import { useTableSort } from '@/utils/sort'
 
 const router = useRouter()
 const store  = useDashboardStore()
 
 const kpi        = computed(() => store.kpi)
 const accounts   = computed(() => store.accounts)
+const {
+  sortKey: accSortKey,
+  sortDir: accSortDir,
+  toggleSort: toggleAccSort,
+  sortRows: sortAccRows
+} = useTableSort('', 'asc', {
+  name:    r => r.name || r.account_name || '',
+  balance: r => parseFloat(r.balance ?? r.current_balance) || 0,
+})
+const sortedAccounts = computed(() => sortAccRows(accounts.value))
 const recentTxns = computed(() => store.recentTxns)
 const events     = computed(() => store.events)
 const monthLabel = computed(() => store.monthLabel)
