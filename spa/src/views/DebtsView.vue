@@ -464,6 +464,7 @@ import DebtForm        from '@/components/forms/DebtForm.vue'
 import DebtPaymentForm from '@/components/forms/DebtPaymentForm.vue'
 import LenderForm      from '@/components/forms/LenderForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const route          = useRoute()
@@ -838,7 +839,7 @@ async function editDebt(id) {
 }
 
 async function removeDebt(id) {
-  if (!confirm('¿Eliminar este préstamo recibido? Esta acción revertirá los ajustes en cuentas y no se puede deshacer.')) return
+  if (!(await confirmDelete('Esta acción revertirá los ajustes en cuentas y no se puede deshacer.', '¿Eliminar este préstamo recibido?'))) return
   const { data } = await api.removeDebt(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)
@@ -881,7 +882,7 @@ async function editLender(id) {
 }
 
 async function removeLender(id) {
-  if (!confirm('¿Eliminar este acreedor / entidad? Esta acción no se puede deshacer.')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este acreedor / entidad?'))) return
   const { data } = await api.removeLender(id)
   if (data.success) { await onLenderMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

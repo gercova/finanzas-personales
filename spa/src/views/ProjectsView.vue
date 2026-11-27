@@ -101,7 +101,8 @@ import ActionDropdown from '@/components/ActionDropdown.vue'
 import AppModal       from '@/components/AppModal.vue'
 import ImportModal    from '@/components/ImportModal.vue'
 import ProjectForm    from '@/components/forms/ProjectForm.vue'
-import { fmtMoney }   from '@/utils/format'
+import { fmtMoney }      from '@/utils/format'
+import { confirmDelete } from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const toast          = inject('toast')
@@ -189,7 +190,7 @@ async function editProject(id) {
 }
 
 async function removeProject(id) {
-  if (!confirm('¿Eliminar este proyecto?')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este proyecto?'))) return
   const { data } = await api.removeProject(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

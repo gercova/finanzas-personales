@@ -162,7 +162,8 @@ import ActionDropdown  from '@/components/ActionDropdown.vue'
 import AppModal        from '@/components/AppModal.vue'
 import AccountForm     from '@/components/forms/AccountForm.vue'
 import FinCategoryForm from '@/components/forms/FinCategoryForm.vue'
-import { fmtMoney }    from '@/utils/format'
+import { fmtMoney }      from '@/utils/format'
+import { confirmDelete } from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const toast            = inject('toast')
@@ -299,7 +300,7 @@ async function editAccount(id) {
 }
 
 async function removeAccount(id) {
-  if (!confirm('¿Eliminar esta cuenta? Los movimientos asociados quedarán sin cuenta.')) return
+  if (!(await confirmDelete('Los movimientos asociados quedarán sin cuenta.', '¿Eliminar esta cuenta?'))) return
   const { data } = await api.removeAccount(id)
   if (data.success) { await onAccountMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)
@@ -319,7 +320,7 @@ async function editFinCategory(id) {
 }
 
 async function removeFinCategory(id) {
-  if (!confirm('¿Eliminar esta categoría? Los movimientos existentes conservarán su historial.')) return
+  if (!(await confirmDelete('Los movimientos existentes conservarán su historial.', '¿Eliminar esta categoría?'))) return
   const { data } = await api.removeFinCategory(id)
   if (data.success) { await onCategoryMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

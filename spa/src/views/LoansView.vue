@@ -443,6 +443,7 @@ import LoanForm       from '@/components/forms/LoanForm.vue'
 import PaymentForm    from '@/components/forms/PaymentForm.vue'
 import BorrowerForm   from '@/components/forms/BorrowerForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const route          = useRoute()
@@ -786,7 +787,7 @@ async function editLoan(id) {
 }
 
 async function removeLoan(id) {
-  if (!confirm('¿Eliminar este préstamo? Esta acción no se puede deshacer.')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este préstamo?'))) return
   const { data } = await api.removeLoan(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)
@@ -829,7 +830,7 @@ async function editBorrower(id) {
 }
 
 async function removeBorrower(id) {
-  if (!confirm('¿Eliminar este prestatario? Esta acción no se puede deshacer.')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este prestatario?'))) return
   const { data } = await api.removeBorrower(id)
   if (data.success) { await onBorrowerMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

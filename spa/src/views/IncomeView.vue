@@ -125,6 +125,7 @@ import AppModal       from '@/components/AppModal.vue'
 import ImportModal    from '@/components/ImportModal.vue'
 import IncomeForm     from '@/components/forms/IncomeForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const toast          = inject('toast')
@@ -237,7 +238,7 @@ async function editIncome(id) {
 }
 
 async function removeIncome(id) {
-  if (!confirm('¿Eliminar este ingreso? Esta acción no se puede deshacer.')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este ingreso?'))) return
   const { data } = await api.removeIncome(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

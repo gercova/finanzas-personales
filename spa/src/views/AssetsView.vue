@@ -120,6 +120,7 @@ import AppModal       from '@/components/AppModal.vue'
 import ImportModal    from '@/components/ImportModal.vue'
 import AssetForm      from '@/components/forms/AssetForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const toast       = inject('toast')
@@ -228,7 +229,7 @@ async function editAsset(id) {
 }
 
 async function removeAsset(id) {
-  if (!confirm('¿Eliminar este activo?')) return
+  if (!(await confirmDelete('Esta acción no se puede deshacer.', '¿Eliminar este activo?'))) return
   const { data } = await api.removeAsset(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)

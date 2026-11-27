@@ -111,6 +111,7 @@ import AppModal       from '@/components/AppModal.vue'
 import ImportModal    from '@/components/ImportModal.vue'
 import ExpenseForm    from '@/components/forms/ExpenseForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import * as api from '@/api'
 
 const toast          = inject('toast')
@@ -232,7 +233,7 @@ async function editExpense(id) {
 }
 
 async function removeExpense(id) {
-  if (!confirm('¿Eliminar este gasto?')) return
+  if (!(await confirmDelete('Esta acción revertirá el ajuste en la cuenta asociada.', '¿Eliminar este gasto?'))) return
   const { data } = await api.removeExpense(id)
   if (data.success) { await onMutated(); toast.success(data.messages) }
   else toast.danger(data.messages)
