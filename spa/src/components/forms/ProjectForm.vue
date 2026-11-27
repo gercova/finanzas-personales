@@ -33,7 +33,7 @@
       <div class="col-sm-4">
         <div class="form-group">
           <label>Fecha de Fin</label>
-          <input v-model="f.end_date" type="date" class="form-control">
+          <input v-model="f.end_date" type="date" class="form-control" :min="f.start_date || undefined">
         </div>
       </div>
     </div>
@@ -56,13 +56,24 @@
 <script setup>
 import { reactive } from 'vue'
 
-defineProps({ editId: { type: Number, default: null } })
+defineProps({ editId: { type: [Number, String], default: null } })
 
 const f = reactive({
   project_id: '',
   project_name: '', client_name: '', budget: '',
   start_date: '', end_date: '', status: 'ACTIVE', description: ''
 })
+
+function reset() {
+  f.project_id   = ''
+  f.project_name = ''
+  f.client_name  = ''
+  f.budget       = ''
+  f.start_date   = ''
+  f.end_date     = ''
+  f.status       = 'ACTIVE'
+  f.description  = ''
+}
 
 function setData(d) {
   if (!d) return
@@ -78,34 +89,45 @@ function setData(d) {
   })
 }
 
-function getFormData() {
+function getValidationError() {
   const b = parseFloat(f.budget)
-  if (!f.project_name.trim() || isNaN(b) || b <= 0) return null
+  if (!f.project_name.trim() || isNaN(b) || b <= 0) {
+    return 'Complete el nombre del proyecto y un presupuesto mayor a 0.'
+  }
+  if (f.start_date && f.end_date && f.end_date < f.start_date) {
+    return 'La fecha de fin no puede ser anterior a la fecha de inicio.'
+  }
+  return ''
+}
 
+function getFormData() {
+  if (getValidationError()) return null
+
+  const b      = parseFloat(f.budget)
   const fd     = new FormData()
   const isEdit = !!f.project_id
 
   if (isEdit) {
     fd.append('edit_project_id',   f.project_id)
     fd.append('edit_project_name', f.project_name.trim())
-    fd.append('edit_client_name',  f.client_name || '')
+    fd.append('edit_client_name',  f.client_name.trim())
     fd.append('edit_budget',       b.toFixed(2))
     fd.append('edit_start_date',   f.start_date || '')
     fd.append('edit_end_date',     f.end_date || '')
     fd.append('edit_status',       f.status)
-    fd.append('edit_description',  f.description || '')
+    fd.append('edit_description',  f.description.trim())
   } else {
     fd.append('project_name', f.project_name.trim())
-    fd.append('client_name',  f.client_name || '')
+    fd.append('client_name',  f.client_name.trim())
     fd.append('budget',       b.toFixed(2))
     fd.append('start_date',   f.start_date || '')
     fd.append('end_date',     f.end_date || '')
     fd.append('status',       f.status)
-    fd.append('description',  f.description || '')
+    fd.append('description',  f.description.trim())
   }
 
   return fd
 }
 
-defineExpose({ getFormData, setData })
+defineExpose({ getFormData, getValidationError, setData, reset })
 </script>

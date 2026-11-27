@@ -160,8 +160,8 @@
 
         <template #cell-client_name="{ row }">{{ row.client_name || '—' }}</template>
         <template #cell-budget="{ row }">S/ {{ fmtMoney(row.budget) }}</template>
-        <template #cell-start_date="{ row }">{{ row.start_date || '—' }}</template>
-        <template #cell-end_date="{ row }">{{ row.end_date || '—' }}</template>
+        <template #cell-start_date="{ row }">{{ row.start_date ? fmtDate(row.start_date) : '—' }}</template>
+        <template #cell-end_date="{ row }">{{ row.end_date ? fmtDate(row.end_date) : '—' }}</template>
         <template #cell-status="{ row }">
           <span :class="'label label-' + statusMeta(row.status).cls">{{ statusMeta(row.status).label }}</span>
         </template>
@@ -230,6 +230,8 @@
 <script setup>
 import { ref, computed, inject, nextTick, onMounted } from 'vue'
 import { useProjectStore } from '@/stores/useProjectStore'
+import { useIncomeStore } from '@/stores/useIncomeStore'
+import { useExpenseStore } from '@/stores/useExpenseStore'
 import { useDashboardStore } from '@/stores/useDashboardStore'
 import { useReportStore } from '@/stores/useReportStore'
 import { useFormOptionsStore } from '@/stores/useFormOptionsStore'
@@ -238,13 +240,15 @@ import ActionDropdown from '@/components/ActionDropdown.vue'
 import AppModal       from '@/components/AppModal.vue'
 import ImportModal    from '@/components/ImportModal.vue'
 import ProjectForm    from '@/components/forms/ProjectForm.vue'
-import { fmtMoney }      from '@/utils/format'
-import { confirmDelete } from '@/utils/confirmDelete'
+import { fmtMoney, fmtDate } from '@/utils/format'
+import { confirmDelete }     from '@/utils/confirmDelete'
 import { getDatePresetRange } from '@/utils/filters'
 import * as api from '@/api'
 
 const toast          = inject('toast')
 const store          = useProjectStore()
+const incomeStore    = useIncomeStore()
+const expenseStore   = useExpenseStore()
 const dashboardStore = useDashboardStore()
 const reportStore    = useReportStore()
 const optionsStore   = useFormOptionsStore()
@@ -315,12 +319,18 @@ function statusMeta(st) {
   return map[st] || { cls: 'default', label: st || '—' }
 }
 
-function openAdd()   { resetForm(); showAdd.value = true }
+function openAdd() {
+  resetForm()
+  showAdd.value = true
+  nextTick(() => addFormRef.value?.reset())
+}
 function resetForm() { formError.value = '' }
 
 async function onMutated() {
   dashboardStore.invalidate()
   reportStore.invalidate()
+  incomeStore.invalidate()
+  expenseStore.invalidate()
   await Promise.all([store.reload(), optionsStore.reload()])
 }
 
@@ -328,11 +338,14 @@ async function submitAdd() {
   saving.value = true; formError.value = ''
   try {
     const fd = addFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete el nombre y un presupuesto mayor a 0.'; return }
+    if (!fd) {
+      formError.value = addFormRef.value?.getValidationError() || 'Complete el nombre y un presupuesto mayor a 0.'
+      return
+    }
     const { data } = await api.createProject(fd)
     if (data.success) { showAdd.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
+  } catch (e) { formError.value = e.response?.data?.messages || 'Error de comunicación.' }
   finally { saving.value = false }
 }
 
@@ -340,11 +353,14 @@ async function submitEdit() {
   saving.value = true; formError.value = ''
   try {
     const fd = editFormRef.value?.getFormData()
-    if (!fd) { formError.value = 'Complete el nombre y un presupuesto mayor a 0.'; return }
+    if (!fd) {
+      formError.value = editFormRef.value?.getValidationError() || 'Complete el nombre y un presupuesto mayor a 0.'
+      return
+    }
     const { data } = await api.editProject(fd)
     if (data.success) { showEdit.value = false; await onMutated(); toast.success(data.messages) }
     else formError.value = data.messages
-  } catch { formError.value = 'Error de comunicación.' }
+  } catch (e) { formError.value = e.response?.data?.messages || 'Error de comunicación.' }
   finally { saving.value = false }
 }
 

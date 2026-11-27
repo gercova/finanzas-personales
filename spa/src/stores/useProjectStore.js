@@ -7,7 +7,7 @@ export const useProjectStore = createEntityStore(
   'v3_projects',
   () => api.fetchProjects(),
   {
-    searchFields: ['project_name', 'client_name', 'budget', 'start_date', 'end_date', 'status'],
+    searchFields: ['project_name', 'client_name', 'budget', 'start_date', 'end_date', 'status', 'description'],
     defaultFilters: {
       client:    '',           // '', '__NONE__', 'name:<lowerClient>'
       status:    '',           // '', 'ACTIVE', 'ON_HOLD', 'COMPLETED'
