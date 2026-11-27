@@ -20,6 +20,34 @@
       </div>
     </div>
 
+    <!-- Clickable quick status & receipt filters -->
+    <div class="quick-filter-bar">
+      <button type="button" class="quick-filter-btn qf-paid"
+              style="background-color:#1f8a4c; border-color:#1f8a4c;"
+              :class="{ 'is-selected': store.filters.status==='PAGADO' }"
+              @click="toggleStatusQuick('PAGADO')">
+        PAGADO
+      </button>
+      <button type="button" class="quick-filter-btn qf-partial"
+              :class="{ 'is-selected': store.filters.status==='PENDIENTE' }"
+              @click="toggleStatusQuick('PENDIENTE')">
+        PENDIENTE
+      </button>
+      <button type="button" class="quick-filter-btn qf-outline-warn"
+              :class="{ 'is-selected': store.filters.receiptFilter==='WITH' }"
+              @click="store.filters.receiptFilter = store.filters.receiptFilter === 'WITH' ? '' : 'WITH'">
+        <i class="glyphicon glyphicon-picture"></i> Con comprobante
+      </button>
+      <button type="button" class="quick-filter-btn qf-outline-danger"
+              :class="{ 'is-selected': store.filters.receiptFilter==='NONE' }"
+              @click="store.filters.receiptFilter = store.filters.receiptFilter === 'NONE' ? '' : 'NONE'">
+        <i class="glyphicon glyphicon-ban-circle"></i> Sin comprobante
+      </button>
+      <button v-if="store.filters.status || store.filters.receiptFilter" type="button" class="btn btn-xs btn-link" style="padding:2px 6px;" @click="store.filters.status = ''; store.filters.receiptFilter = ''">
+        Ver todos
+      </button>
+    </div>
+
     <div class="panel panel-default">
       <DataTable
         title="Gestión de Gastos"
@@ -34,6 +62,121 @@
           <button type="button" class="btn btn-danger" @click="openAdd">
             <i class="glyphicon glyphicon-plus-sign"></i> Registrar Gasto
           </button>
+        </template>
+
+        <template #filters>
+          <div style="background:#f9f9f9; border:1px solid #e5e5e5; border-radius:4px; padding:10px 12px; margin-bottom:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:10px;">
+              <div style="font-size:12.5px; font-weight:700; color:#444;">
+                <i class="glyphicon glyphicon-filter text-primary"></i> Filtros de búsqueda
+                <span v-if="store.activeFilterCount > 0" class="badge" style="background:#337ab7; margin-left:4px;">
+                  {{ store.activeFilterCount }}
+                </span>
+                <span v-if="store.activeFilterCount > 0 || store.search" class="text-danger" style="margin-left:10px; font-weight:600;">
+                  · Total filtrado: S/ {{ fmtMoney(filteredTotal) }}
+                </span>
+              </div>
+              <div style="display:flex; align-items:center; flex-wrap:wrap; gap:4px;">
+                <span class="text-muted" style="font-size:11px; margin-right:2px;">Rango rápido:</span>
+                <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('today')">Hoy</button>
+                <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('this_month')">Este mes</button>
+                <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('last_month')">Mes ant.</button>
+                <button type="button" class="btn btn-xs btn-default" @click="applyDatePreset('this_year')">Este año</button>
+                <button
+                  v-if="store.activeFilterCount > 0 || store.search"
+                  type="button"
+                  class="btn btn-xs btn-danger"
+                  style="margin-left:6px;"
+                  @click="store.resetFilters()"
+                >
+                  <i class="glyphicon glyphicon-remove"></i> Limpiar filtros
+                </button>
+              </div>
+            </div>
+
+            <div class="row" style="margin-bottom:8px;">
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-credit-card"></i> Cuenta
+                </label>
+                <select class="form-control input-sm" v-model="store.filters.accountId">
+                  <option value="">Todas las cuentas</option>
+                  <option v-for="a in accountFilterOptions" :key="a.value" :value="a.value">{{ a.label }}</option>
+                </select>
+              </div>
+
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-tags"></i> Categoría
+                </label>
+                <select class="form-control input-sm" v-model="store.filters.categoryId">
+                  <option value="">Todas las categorías</option>
+                  <option value="__NONE__">Sin categoría</option>
+                  <option v-for="c in categoryFilterOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+                </select>
+              </div>
+
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-briefcase"></i> Proyecto
+                </label>
+                <select class="form-control input-sm" v-model="store.filters.projectId">
+                  <option value="">Todos los proyectos</option>
+                  <option value="__NONE__">Sin proyecto</option>
+                  <option v-for="p in projects" :key="p.id" :value="String(p.id)">{{ p.project_name }}</option>
+                </select>
+              </div>
+
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:6px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-tag"></i> Estado
+                </label>
+                <select class="form-control input-sm" v-model="store.filters.status">
+                  <option value="">Todos los estados</option>
+                  <option value="PAGADO">Pagado</option>
+                  <option value="PENDIENTE">Pendiente</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-xs-6 col-sm-3 col-md-3" style="margin-bottom:4px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-calendar"></i> Fecha Desde
+                </label>
+                <input type="date" class="form-control input-sm" v-model="store.filters.dateFrom" />
+              </div>
+
+              <div class="col-xs-6 col-sm-3 col-md-3" style="margin-bottom:4px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  Fecha Hasta
+                </label>
+                <input type="date" class="form-control input-sm" v-model="store.filters.dateTo" />
+              </div>
+
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:4px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-picture"></i> Comprobante
+                </label>
+                <select class="form-control input-sm" v-model="store.filters.receiptFilter">
+                  <option value="">Todos</option>
+                  <option value="WITH">Con comprobante</option>
+                  <option value="NONE">Sin comprobante</option>
+                </select>
+              </div>
+
+              <div class="col-xs-12 col-sm-6 col-md-3" style="margin-bottom:4px;">
+                <label class="control-label" style="font-size:11.5px; color:#555; margin-bottom:3px; display:block;">
+                  <i class="glyphicon glyphicon-usd"></i> Monto (S/)
+                </label>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input type="number" step="0.01" min="0" class="form-control input-sm" placeholder="Mín." v-model="store.filters.minAmount" />
+                  <span class="text-muted">-</span>
+                  <input type="number" step="0.01" min="0" class="form-control input-sm" placeholder="Máx." v-model="store.filters.maxAmount" />
+                </div>
+              </div>
+            </div>
+          </div>
         </template>
 
         <template #cell-account_name="{ row }">{{ row.account_name || '-' }}</template>
@@ -112,6 +255,7 @@ import ImportModal    from '@/components/ImportModal.vue'
 import ExpenseForm    from '@/components/forms/ExpenseForm.vue'
 import { fmtMoney, fmtDate } from '@/utils/format'
 import { confirmDelete }     from '@/utils/confirmDelete'
+import { getDatePresetRange, buildRefOptions } from '@/utils/filters'
 import * as api from '@/api'
 
 const toast          = inject('toast')
@@ -146,6 +290,33 @@ const editFormRef = ref(null)
 const accounts   = computed(() => optionsStore.accounts)
 const categories = computed(() => optionsStore.expenseCategories)
 const projects   = computed(() => optionsStore.projects)
+
+const accountFilterOptions = computed(() =>
+  buildRefOptions(accounts.value, store.rows, {
+    formIdKey: 'id', formNameKey: 'account_name',
+    rowIdKey: 'account_id', rowNameKey: 'account_name',
+  })
+)
+const categoryFilterOptions = computed(() =>
+  buildRefOptions(categories.value, store.rows, {
+    formIdKey: 'id', formNameKey: 'category_name',
+    rowIdKey: 'category_id', rowNameKey: 'category_name',
+  })
+)
+
+const filteredTotal = computed(() =>
+  store.filtered.reduce((acc, r) => acc + (r.amount || 0), 0)
+)
+
+function toggleStatusQuick(status) {
+  store.filters.status = store.filters.status === status ? '' : status
+}
+
+function applyDatePreset(preset) {
+  const { dateFrom, dateTo } = getDatePresetRange(preset)
+  store.filters.dateFrom = dateFrom
+  store.filters.dateTo   = dateTo
+}
 
 const spendLimit = computed(() => {
   const kpi = dashboardStore.kpi

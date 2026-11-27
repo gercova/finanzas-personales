@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, reactive, computed, watch } from 'vue'
 import { cacheGet, cacheSet, cacheDel } from './cache'
 import { sortList } from '@/utils/sort'
 
@@ -20,6 +20,9 @@ function formatValueForSearch(val) {
 export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
   const defaultPageSize = options.pageSize || 15
   const searchFields    = options.searchFields || null
+  const defaultFilters  = options.defaultFilters || null
+  const filterFn        = typeof options.filterFn === 'function' ? options.filterFn : null
+  const countFiltersFn  = typeof options.countFiltersFn === 'function' ? options.countFiltersFn : null
 
   return defineStore(storeId, () => {
     const rows     = ref([])
@@ -31,6 +34,35 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
     const sortKey  = ref('')
     const sortDir  = ref('asc')
     let sortGetter = null
+
+    const filters = defaultFilters ? reactive({ ...defaultFilters }) : null
+
+    if (filters) {
+      watch(filters, () => {
+        page.value = 1
+      }, { deep: true })
+    }
+
+    const activeFilterCount = computed(() => {
+      if (!filters) return 0
+      if (countFiltersFn) return countFiltersFn(filters)
+      let count = 0
+      for (const [k, v] of Object.entries(filters)) {
+        if (k === 'dateField') continue
+        if (v !== '' && v !== null && v !== undefined) count++
+      }
+      return count
+    })
+
+    function resetFilters() {
+      if (filters && defaultFilters) {
+        Object.keys(defaultFilters).forEach(k => {
+          filters[k] = defaultFilters[k]
+        })
+      }
+      search.value = ''
+      page.value   = 1
+    }
 
     function setSort(key, valueGetter = null) {
       if (!key) return
@@ -46,8 +78,11 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
 
     const filtered = computed(() => {
       const q = search.value.trim().toLowerCase()
-      if (!q) return rows.value
       return rows.value.filter(row => {
+        if (filterFn && filters && !filterFn(row, filters)) {
+          return false
+        }
+        if (!q) return true
         const vals = searchFields
           ? searchFields.map(k => row[k])
           : Object.values(row)
@@ -107,6 +142,7 @@ export function createEntityStore(storeId, cacheKey, fetcher, options = {}) {
     return {
       rows, loading, error, search, page, pageSize,
       sortKey, sortDir, setSort,
+      ...(filters ? { filters, activeFilterCount, resetFilters } : {}),
       filtered, totalPages, pageRows, load, reload, invalidate
     }
   })
